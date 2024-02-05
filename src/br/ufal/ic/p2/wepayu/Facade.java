@@ -133,16 +133,18 @@ public class Facade {
         return this.employeesHistory.stream().filter(item -> item.getEmployeeId().equals(employeeId)).toList();
     }
 
-    private LocalDate verifyDate(String newDate, String type) throws Exception {
+    private LocalDate verifyDate(String newDate, String type, boolean isStrict) throws Exception {
         LocalDate date;
 
         try {
-            date = DateFormat.stringToDate(newDate);
+            date = DateFormat.stringToDate(newDate, isStrict);
         } catch(Exception e) {
             if(type.equals("start")) {
                 throw new Exception("Data inicial invalida.");
-            } else {
+            } else if(type.equals("finish")) {
                 throw new Exception("Data final invalida.");
+            } else {
+                throw new Exception("Data invalida.");
             }
         }
 
@@ -150,8 +152,12 @@ public class Facade {
     }
 
     public int getHorasNormaisTrabalhadas(String employeeId, String startDate, String finishDate) throws Exception {
-        LocalDate formattedStartDate = this.verifyDate(startDate, "start");
-        LocalDate formattedFinishDate = this.verifyDate(finishDate, "start");
+        LocalDate formattedStartDate = this.verifyDate(startDate, "start", false);
+        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", true);
+
+        if(formattedStartDate.isAfter(formattedFinishDate)) {
+            throw new Exception("Data inicial nao pode ser posterior aa data final.");
+        }
 
         String employeeType = getAtributoEmpregado(employeeId, "tipo");
 
@@ -181,13 +187,14 @@ public class Facade {
     }
 
     public String getHorasExtrasTrabalhadas(String employeeId, String startDate, String finishDate) throws Exception {
-        LocalDate formattedStartDate = this.verifyDate(startDate, "start");
-        LocalDate formattedFinishDate = this.verifyDate(finishDate, "start");
+        LocalDate formattedStartDate = this.verifyDate(startDate, "start", false);
+        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", false);
 
         if(this.employeesHistory == null || this.employeesHistory.isEmpty()) return "0";
 
         List<EmployeeHistory> filteredHistory = getEmployeeHistoryById(employeeId);
         double totalHours = 0;
+        int workedDays = 0;
 
         if(!filteredHistory.isEmpty()) {
             for (EmployeeHistory employeeHistory : filteredHistory) {
@@ -195,13 +202,14 @@ public class Facade {
 
                 if(date.isAfter(formattedStartDate) || date.isEqual(formattedStartDate)) {
                     if(date.isBefore(formattedFinishDate)) {
+                        workedDays += 1;
                         totalHours += employeeHistory.getHours();
                     }
                 }
             }
         }
 
-        totalHours -= 8;
+        totalHours = totalHours >= (workedDays*8) ? totalHours - (8*workedDays) : 0;
 
         return totalHours > 0 ?
             Double.toString(totalHours).replace('.', ',').replace(",0", "")
@@ -210,6 +218,8 @@ public class Facade {
 
     public void lancaCartao(String employeeId, String date, String hours) throws Exception {
         String employeeType = getAtributoEmpregado(employeeId, "tipo");
+
+        LocalDate formattedDate = this.verifyDate(date, "", true);
 
         if(!employeeType.equals("horista")) {
             throw new Exception("Empregado nao eh horista.");
@@ -223,7 +233,7 @@ public class Facade {
             throw new Exception("Horas devem ser positivas.");
         }
 
-        EmployeeHistory newEmployeeHistory = new EmployeeHistory(newId, employeeId, DateFormat.stringToDate(date), formattedHours);
+        EmployeeHistory newEmployeeHistory = new EmployeeHistory(newId, employeeId, formattedDate, formattedHours);
 
         this.employeesHistory.add(newEmployeeHistory);
         saveHistoryInDatabase();

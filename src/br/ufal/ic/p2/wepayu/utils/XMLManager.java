@@ -218,7 +218,7 @@ public class XMLManager {
                     String date = employeeElement.getElementsByTagName("date").item(0).getTextContent();
                     String hours = employeeElement.getElementsByTagName("hours").item(0).getTextContent();
 
-                    EmployeeHistory newHistory = new EmployeeHistory(id, employeeId, DateFormat.stringToDate(date), Double.parseDouble(hours));
+                    EmployeeHistory newHistory = new EmployeeHistory(id, employeeId, DateFormat.stringToDate(date, false), Double.parseDouble(hours));
 
                     newHistoryListToReturn.add(newHistory);
                 }
