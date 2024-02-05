@@ -1,7 +1,10 @@
 package br.ufal.ic.p2.wepayu;
 
 import br.ufal.ic.p2.wepayu.models.Employee;
+import br.ufal.ic.p2.wepayu.utils.XMLManager;
 
+import java.beans.XMLDecoder;
+import java.beans.XMLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,9 +12,18 @@ import java.util.Optional;
 
 public class Facade {
 
-    List<Employee> employees;
+    private List<Employee> employees;
+    private XMLManager xmlDatabase;
+
     private String[] typeOptions = { "horista", "assalariado", "comissionado" };
     private String[] employeeProperties = { "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao" };
+
+    public Facade() throws Exception {
+        this.xmlDatabase = new XMLManager("employees");
+        this.employees = this.xmlDatabase.readAndGetEmployeeFile();
+
+        System.out.println("FILE SIZE -> " + this.employees.size());
+    }
 
     public void zerarSistema() {
         this.employees = new ArrayList<>();
@@ -80,10 +92,12 @@ public class Facade {
             address,
             type,
             newRemuneration,
-            newCommission
+            newCommission,
+            false
         );
 
         this.employees.add(employee);
+        saveEmployeeInDatabase();
 
         return employee.getId();
     }
@@ -94,6 +108,17 @@ public class Facade {
         return criarEmpregado(name, address, type, remuneration, "0");
     }
 
+    public boolean saveEmployeeInDatabase() throws Exception {
+        try {
+            this.xmlDatabase.createAndSaveEmployeeDocument(this.employees);
+            this.employees = this.xmlDatabase.readAndGetEmployeeFile();
+        } catch(Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        return true;
+    }
 
     public void encerrarSistema() {}
 

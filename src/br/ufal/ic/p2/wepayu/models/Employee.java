@@ -9,19 +9,17 @@ public class Employee {
     private String address;
     private String type;
     private double remuneration;
-
     private double commission;
-
     private boolean unionized;
 
-    public Employee(String id, String name, String address, String type, double remuneration, double commission) {
+    public Employee(String id, String name, String address, String type, double remuneration, double commission, boolean unionized) {
         this.id = id;
         this.name = name;
         this.address = address;
         this.type = type;
         this.remuneration = remuneration;
         this.commission = commission;
-        this.unionized = false;
+        this.unionized = unionized;
     }
 
     public String getName() {
