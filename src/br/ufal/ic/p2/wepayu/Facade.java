@@ -17,7 +17,6 @@ public class Facade {
     private List<EmployeeHistory> employeesHistory;
     private XMLManager xmlEmployeeDatabase;
     private XMLManager xmlHistoryDatabase;
-
     private String[] typeOptions = { "horista", "assalariado", "comissionado" };
     private String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao" };
 
