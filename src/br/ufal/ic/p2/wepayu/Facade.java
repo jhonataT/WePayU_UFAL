@@ -2,6 +2,7 @@ package br.ufal.ic.p2.wepayu;
 
 import br.ufal.ic.p2.wepayu.models.EmployeeHistory;
 import br.ufal.ic.p2.wepayu.models.Employee;
+import br.ufal.ic.p2.wepayu.models.EmployeeSales;
 import br.ufal.ic.p2.wepayu.utils.DateFormat;
 import br.ufal.ic.p2.wepayu.utils.XMLManager;
 
@@ -15,17 +16,21 @@ import java.util.List;
 public class Facade {
     private List<Employee> employees;
     private List<EmployeeHistory> employeesHistory;
+    private List<EmployeeSales> employeeSales;
     private XMLManager xmlEmployeeDatabase;
     private XMLManager xmlHistoryDatabase;
+    private XMLManager xmlSalesDatabase;
     private String[] typeOptions = { "horista", "assalariado", "comissionado" };
     private String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao" };
-
 
     public Facade() throws Exception {
         this.xmlEmployeeDatabase = new XMLManager("employee", "employees");
         this.xmlHistoryDatabase = new XMLManager("history", "employee_history");
+        // this.xmlSalesDatabase = new XMLManager("sales", "employee_sales");
+
         this.employees = this.xmlEmployeeDatabase.readAndGetEmployeeFile();
         this.employeesHistory = this.xmlHistoryDatabase.readAndGetHistoryFile();
+        // this.employeeSales = this.xmlSalesDatabase.readAndGetSalesFile();
 
         System.out.println("Employees number " + this.employees.size());
     }
@@ -131,6 +136,8 @@ public class Facade {
     private List<EmployeeHistory> getEmployeeHistoryById(String employeeId) {
         return this.employeesHistory.stream().filter(item -> item.getEmployeeId().equals(employeeId)).toList();
     }
+
+    // private List<EmployeeSales> getEmployee
 
     private LocalDate verifyDate(String newDate, String type, boolean isStrict) throws Exception {
         LocalDate date;
@@ -244,8 +251,23 @@ public class Facade {
         return criarEmpregado(name, address, type, remuneration, "0");
     }
 
-    public void removeEmpregado(String employeeId) throws Exception {
+    public String getVendasRealizadas(String employeeId, String startDate, String finishDate) throws Exception {
+        LocalDate formattedStartDate = this.verifyDate(startDate, "start", false);
+        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", false);
+
+
+        return "";
+    }
+
+    public void removerEmpregado(String employeeId) throws Exception {
+        if(employeeId.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
+
+        List<Employee> employeeToRemove = this.employees.stream().filter(item -> item.getId().equals(employeeId)).toList();
+
+        if(employeeToRemove.isEmpty()) throw new Exception("Empregado nao existe.");
+
         this.employees = this.employees.stream().filter(item -> !item.getId().equals(employeeId)).toList();
+
         saveEmployeeInDatabase();
     }
 
@@ -271,5 +293,4 @@ public class Facade {
     }
 
     public void encerrarSistema() {}
-
 }

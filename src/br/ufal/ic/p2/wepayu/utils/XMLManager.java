@@ -2,6 +2,7 @@ package br.ufal.ic.p2.wepayu.utils;
 
 import br.ufal.ic.p2.wepayu.models.Employee;
 import br.ufal.ic.p2.wepayu.models.EmployeeHistory;
+import br.ufal.ic.p2.wepayu.models.EmployeeSales;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
@@ -146,6 +147,49 @@ public class XMLManager {
         t.transform(domSource, streamResult);
     }
 
+    public void createAndSaveSalesDocument(List<EmployeeSales> newSales) throws Exception {
+        if(!this.fileType.equals("sales")) {
+            throw new Exception("invalid method");
+        }
+
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = dbf.newDocumentBuilder();
+
+        Document document = db.newDocument();
+
+        Element rootElement = document.createElement("EmployeesSales");
+        document.appendChild(rootElement);
+
+        for (EmployeeSales newSale : newSales) {
+            Element childElement = document.createElement("sale");
+
+            Element childEmployeeIdElement = document.createElement("employeeId");
+            childEmployeeIdElement.appendChild(document.createTextNode(newSale.getEmployeeId()));
+
+            Element childDateElement = document.createElement("date");
+            childDateElement.appendChild(document.createTextNode(newSale.getDate().toString()));
+
+            Element childValueElement = document.createElement("value");
+            childValueElement.appendChild(document.createTextNode(Double.toString(newSale.getValue())));
+
+            Attr attr = document.createAttribute("id");
+            attr.setValue(newSale.getId());
+            childElement.setAttributeNode(attr);
+
+            rootElement.appendChild(childElement);
+            childElement.appendChild(childEmployeeIdElement);
+            childElement.appendChild(childDateElement);
+            childElement.appendChild(childValueElement);
+        }
+
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer t = tf.newTransformer();
+        DOMSource domSource = new DOMSource(document);
+        StreamResult streamResult = new StreamResult(this.file);
+
+        t.transform(domSource, streamResult);
+    }
+
     public void createAndSaveHistoryDocument(List<EmployeeHistory> newHistoryList) throws Exception {
         if(!this.fileType.equals("history")) {
             throw new Exception("invalid method");
@@ -187,6 +231,47 @@ public class XMLManager {
         StreamResult streamResult = new StreamResult(this.file);
 
         t.transform(domSource, streamResult);
+    }
+
+    public List<EmployeeSales> readAndGetSalesFile() throws Exception {
+        if(!this.fileType.equals("sales")) {
+            throw new Exception("invalid method");
+        }
+
+        List<EmployeeSales> newSalesListToReturn = new ArrayList<EmployeeSales>();
+
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+
+            Document document = builder.parse(this.fileName);
+
+            Element rootElement = document.getDocumentElement();
+
+            NodeList saleList = rootElement.getElementsByTagName("sale");
+
+            for (int i = 0; i < saleList.getLength(); i++) {
+                Node saleNode = saleList.item(i);
+
+                if (saleNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element employeeElement = (Element) saleNode;
+
+                    // Obter informações do elemento "employee"
+                    String id = employeeElement.getAttribute("id");
+                    String employeeId = employeeElement.getElementsByTagName("employeeId").item(0).getTextContent();
+                    String date = employeeElement.getElementsByTagName("date").item(0).getTextContent();
+                    String value = employeeElement.getElementsByTagName("value").item(0).getTextContent();
+
+                    EmployeeSales newSale = new EmployeeSales(id, employeeId, DateFormat.stringToDate(date, false), Double.parseDouble(value));
+
+                    newSalesListToReturn.add(newSale);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return newSalesListToReturn;
     }
 
     public List<EmployeeHistory> readAndGetHistoryFile() throws Exception {
