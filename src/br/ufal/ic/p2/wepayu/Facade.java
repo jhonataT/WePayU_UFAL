@@ -3,8 +3,6 @@ package br.ufal.ic.p2.wepayu;
 import br.ufal.ic.p2.wepayu.models.Employee;
 import br.ufal.ic.p2.wepayu.utils.XMLManager;
 
-import java.beans.XMLDecoder;
-import java.beans.XMLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -21,16 +19,14 @@ public class Facade {
     public Facade() throws Exception {
         this.xmlDatabase = new XMLManager("employees");
         this.employees = this.xmlDatabase.readAndGetEmployeeFile();
-
-        System.out.println("FILE SIZE -> " + this.employees.size());
     }
 
     public void zerarSistema() {
         this.employees = new ArrayList<>();
     }
 
-    private Optional<Employee> getEmployeeById(String id) {
-        return this.employees.stream().filter(item -> item.getId().equals(id)).findFirst();
+    private List<Employee> getEmployeeById(String id) {
+        return this.employees.stream().filter(item -> item.getId().equals(id)).toList();
     }
 
     private boolean isNumeric(String str) {
@@ -43,24 +39,47 @@ public class Facade {
     }
 
     public String getAtributoEmpregado(String id, String property) throws Exception  {
-        if(id.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
-        if(Arrays.stream(this.employeeProperties).noneMatch(item -> item.equals(property))) throw new Exception("Atributo nao existe.");
-        if(this.employees.isEmpty()) throw new Exception("Empregado nao existe.");
+        if(id.isEmpty())
+            throw new Exception("Identificacao do empregado nao pode ser nula.");
+        if(Arrays.stream(this.employeeProperties).noneMatch(item -> item.equals(property)))
+            throw new Exception("Atributo nao existe.");
+        if(this.employees.isEmpty())
+            throw new Exception("Empregado nao existe.");
 
-        Optional<Employee> optionalEmployee = this.getEmployeeById(id);
+        List<Employee> filteredEmployees = this.getEmployeeById(id);
 
-        if(optionalEmployee.isPresent()) {
-            Employee filteredEmployee = optionalEmployee.get();
+        if(!filteredEmployees.isEmpty()) {
+            Employee filteredEmployee = filteredEmployees.get(0);
 
-            if(property.equals("nome")) return filteredEmployee.getName();
-            else if(property.equals("endereco")) return filteredEmployee.getAddress();
-            else if(property.equals("tipo")) return filteredEmployee.getType();
-            else if(property.equals("salario")) return String.format("%.2f", filteredEmployee.getRemuneration()).replace('.', ',');
-            else if(property.equals("sindicalizado")) return Boolean.toString(filteredEmployee.getUnionized());
-            else if(property.equals("comissao")) return String.format("%.2f", filteredEmployee.getCommission()).replace('.', ',');
+            if(property.equals("nome"))
+                return filteredEmployee.getName();
+            else if(property.equals("endereco"))
+                return filteredEmployee.getAddress();
+            else if(property.equals("tipo"))
+                return filteredEmployee.getType();
+            else if(property.equals("salario"))
+                return String.format("%.2f", filteredEmployee.getRemuneration()).replace('.', ',');
+            else if(property.equals("sindicalizado"))
+                return Boolean.toString(filteredEmployee.getUnionized());
+            else if(property.equals("comissao"))
+                return String.format("%.2f", filteredEmployee.getCommission()).replace('.', ',');
         }
 
         throw new Exception("Empregado nao existe.");
+    }
+
+    public String getEmpregadoPorNome(String employeeName, int index) throws Exception {
+        List<Employee> filteredEmployees = this.employees.stream().filter(
+            item -> item.getName().equals(employeeName)
+        ).toList();
+
+        if(!filteredEmployees.isEmpty() && index >= 0) {
+            Employee employeeToReturn = filteredEmployees.get(index - 1);
+
+            return employeeToReturn.getId();
+        }
+
+        throw new Exception("Nao ha empregado com esse nome.");
     }
 
     public String criarEmpregado(String name, String address, String type, String remuneration, String commission) throws Exception {
