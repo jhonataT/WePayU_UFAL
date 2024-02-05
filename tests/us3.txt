@@ -13,7 +13,7 @@ id1=criarEmpregado nome="Joao da Silva" endereco="Rua dos Jooes, 333 - Campina G
 id2=criarEmpregado nome="Mariazinha" endereco="Rua das Marias, 333 - Campina Grande" \
 	tipo=horista salario=2300
 id3=criarEmpregado nome="Gaiato Vendedor" endereco="Rua dos Bufoes, 333 - Campina Grande" \
-	tipo=comissionado salario=1300 comissao=0,05 
+	tipo=comissionado s alario=1300 comissao=0,05
 id4=criarEmpregado nome="Gorete" endereco="Rua das Marias, 333 - Campina Grande" \
 	tipo=assalariado salario=2300
 

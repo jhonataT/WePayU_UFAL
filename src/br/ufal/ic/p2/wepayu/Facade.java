@@ -1,28 +1,42 @@
 package br.ufal.ic.p2.wepayu;
 
+import br.ufal.ic.p2.wepayu.models.EmployeeHistory;
 import br.ufal.ic.p2.wepayu.models.Employee;
+import br.ufal.ic.p2.wepayu.utils.DateFormat;
 import br.ufal.ic.p2.wepayu.utils.XMLManager;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 public class Facade {
-
     private List<Employee> employees;
-    private XMLManager xmlDatabase;
+    private List<EmployeeHistory> employeesHistory;
+    private XMLManager xmlEmployeeDatabase;
+    private XMLManager xmlHistoryDatabase;
 
     private String[] typeOptions = { "horista", "assalariado", "comissionado" };
-    private String[] employeeProperties = { "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao" };
+    private String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao" };
+
 
     public Facade() throws Exception {
-        this.xmlDatabase = new XMLManager("employees");
-        this.employees = this.xmlDatabase.readAndGetEmployeeFile();
+        this.xmlEmployeeDatabase = new XMLManager("employee", "employees");
+        this.xmlHistoryDatabase = new XMLManager("history", "employee_history");
+        this.employees = this.xmlEmployeeDatabase.readAndGetEmployeeFile();
+        this.employeesHistory = this.xmlHistoryDatabase.readAndGetHistoryFile();
+
+        System.out.println("Employees number " + this.employees.size());
     }
 
-    public void zerarSistema() {
-        this.employees = new ArrayList<>();
+    public void zerarSistema() throws Exception {
+        this.employees = new ArrayList<Employee>();
+        this.employeesHistory = new ArrayList<EmployeeHistory>();
+
+        this.xmlEmployeeDatabase.createAndSaveEmployeeDocument(this.employees);
+        this.xmlHistoryDatabase.createAndSaveHistoryDocument(this.employeesHistory);
     }
 
     private List<Employee> getEmployeeById(String id) {
@@ -53,6 +67,8 @@ public class Facade {
 
             if(property.equals("nome"))
                 return filteredEmployee.getName();
+            if(property.equals("id"))
+                return filteredEmployee.getId();
             else if(property.equals("endereco"))
                 return filteredEmployee.getAddress();
             else if(property.equals("tipo"))
@@ -105,20 +121,112 @@ public class Facade {
 
 
         String newId = Integer.toString(this.employees.size() + 1);
-        Employee employee = new Employee(
-            "id".concat(newId),
-            name,
-            address,
-            type,
-            newRemuneration,
-            newCommission,
-            false
-        );
+        Employee employee = new Employee("id".concat(newId), name, address, type, newRemuneration, newCommission, false);
 
         this.employees.add(employee);
         saveEmployeeInDatabase();
 
         return employee.getId();
+    }
+
+    private List<EmployeeHistory> getEmployeeHistoryById(String employeeId) {
+        return this.employeesHistory.stream().filter(item -> item.getEmployeeId().equals(employeeId)).toList();
+    }
+
+    private LocalDate verifyDate(String newDate, String type) throws Exception {
+        LocalDate date;
+
+        try {
+            date = DateFormat.stringToDate(newDate);
+        } catch(Exception e) {
+            if(type.equals("start")) {
+                throw new Exception("Data inicial invalida.");
+            } else {
+                throw new Exception("Data final invalida.");
+            }
+        }
+
+        return date;
+    }
+
+    public int getHorasNormaisTrabalhadas(String employeeId, String startDate, String finishDate) throws Exception {
+        LocalDate formattedStartDate = this.verifyDate(startDate, "start");
+        LocalDate formattedFinishDate = this.verifyDate(finishDate, "start");
+
+        String employeeType = getAtributoEmpregado(employeeId, "tipo");
+
+        if(!employeeType.equals("horista")) {
+            throw new Exception("Empregado nao eh horista.");
+        }
+
+        if(this.employeesHistory == null || this.employeesHistory.isEmpty()) return 0;
+
+        List<EmployeeHistory> filteredHistory = getEmployeeHistoryById(employeeId);
+        int totalHours = 0;
+
+        if(!filteredHistory.isEmpty()) {
+            for (EmployeeHistory employeeHistory : filteredHistory) {
+                LocalDate date = employeeHistory.getDate();
+
+                if(date.isAfter(formattedStartDate) || date.isEqual(formattedStartDate)) {
+                    if(date.isBefore(formattedFinishDate)) {
+                        int validHour = (int) employeeHistory.getHours() > 8 ? 8 : (int) employeeHistory.getHours();
+                        totalHours += validHour;
+                    }
+                }
+            }
+        }
+
+        return totalHours;
+    }
+
+    public String getHorasExtrasTrabalhadas(String employeeId, String startDate, String finishDate) throws Exception {
+        LocalDate formattedStartDate = this.verifyDate(startDate, "start");
+        LocalDate formattedFinishDate = this.verifyDate(finishDate, "start");
+
+        if(this.employeesHistory == null || this.employeesHistory.isEmpty()) return "0";
+
+        List<EmployeeHistory> filteredHistory = getEmployeeHistoryById(employeeId);
+        double totalHours = 0;
+
+        if(!filteredHistory.isEmpty()) {
+            for (EmployeeHistory employeeHistory : filteredHistory) {
+                LocalDate date = employeeHistory.getDate();
+
+                if(date.isAfter(formattedStartDate) || date.isEqual(formattedStartDate)) {
+                    if(date.isBefore(formattedFinishDate)) {
+                        totalHours += employeeHistory.getHours();
+                    }
+                }
+            }
+        }
+
+        totalHours -= 8;
+
+        return totalHours > 0 ?
+            Double.toString(totalHours).replace('.', ',').replace(",0", "")
+            : "0";
+    }
+
+    public void lancaCartao(String employeeId, String date, String hours) throws Exception {
+        String employeeType = getAtributoEmpregado(employeeId, "tipo");
+
+        if(!employeeType.equals("horista")) {
+            throw new Exception("Empregado nao eh horista.");
+        }
+
+        String newId = "history_id_"+this.employeesHistory.size();
+
+        double formattedHours = Double.parseDouble(hours.replace(",", "."));
+
+        if(formattedHours <= 0) {
+            throw new Exception("Horas devem ser positivas.");
+        }
+
+        EmployeeHistory newEmployeeHistory = new EmployeeHistory(newId, employeeId, DateFormat.stringToDate(date), formattedHours);
+
+        this.employeesHistory.add(newEmployeeHistory);
+        saveHistoryInDatabase();
     }
 
     public String criarEmpregado(String name, String address, String type, String remuneration) throws Exception {
@@ -127,10 +235,24 @@ public class Facade {
         return criarEmpregado(name, address, type, remuneration, "0");
     }
 
+    public void removeEmpregado(String employeeId) throws Exception {
+        this.employees = this.employees.stream().filter(item -> !item.getId().equals(employeeId)).toList();
+        saveEmployeeInDatabase();
+    }
+
+    public void saveHistoryInDatabase() throws Exception {
+        try {
+            this.xmlHistoryDatabase.createAndSaveHistoryDocument(this.employeesHistory);
+            this.employeesHistory = this.xmlHistoryDatabase.readAndGetHistoryFile();
+        } catch(Exception error) {
+            error.printStackTrace();
+        }
+    }
+
     public boolean saveEmployeeInDatabase() throws Exception {
         try {
-            this.xmlDatabase.createAndSaveEmployeeDocument(this.employees);
-            this.employees = this.xmlDatabase.readAndGetEmployeeFile();
+            this.xmlEmployeeDatabase.createAndSaveEmployeeDocument(this.employees);
+            this.employees = this.xmlEmployeeDatabase.readAndGetEmployeeFile();
         } catch(Exception e) {
             e.printStackTrace();
             return false;
