@@ -1,6 +1,7 @@
 package br.ufal.ic.p2.wepayu.models;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Employee {
     private final String id;
@@ -11,6 +12,8 @@ public class Employee {
     private double remuneration;
     private double commission;
     private boolean unionized;
+    private List<Sale> saleList;
+    private List<EmployeeTimestamp> timestamp;
 
     public Employee(String id, String name, String address, String type, double remuneration, double commission, boolean unionized) {
         this.id = id;
@@ -20,6 +23,8 @@ public class Employee {
         this.remuneration = remuneration;
         this.commission = commission;
         this.unionized = unionized;
+        this.saleList = new ArrayList<>();
+        this.timestamp = new ArrayList<>();
     }
 
     public String getName() {
@@ -64,6 +69,22 @@ public class Employee {
 
     public void setRemuneration(int newRemuneration) {
         this.remuneration = newRemuneration;
+    }
+
+    public List<Sale> getSales() {
+        return this.saleList;
+    }
+
+    public List<EmployeeTimestamp> getTimestamp() {
+        return this.timestamp;
+    }
+
+    public void setSale(Sale newSale) {
+        this.saleList.add(newSale);
+    }
+
+    public void setTimestamp(EmployeeTimestamp newTimeStamp) {
+        this.timestamp.add(newTimeStamp);
     }
 
 }

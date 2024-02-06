@@ -1,46 +1,32 @@
 package br.ufal.ic.p2.wepayu;
 
-import br.ufal.ic.p2.wepayu.models.EmployeeHistory;
 import br.ufal.ic.p2.wepayu.models.Employee;
-import br.ufal.ic.p2.wepayu.models.EmployeeSales;
+import br.ufal.ic.p2.wepayu.models.EmployeeTimestamp;
+import br.ufal.ic.p2.wepayu.models.Sale;
 import br.ufal.ic.p2.wepayu.utils.DateFormat;
 import br.ufal.ic.p2.wepayu.utils.XMLManager;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Facade {
     private List<Employee> employees;
-    private List<EmployeeHistory> employeesHistory;
-    private List<EmployeeSales> employeeSales;
-    private XMLManager xmlEmployeeDatabase;
-    private XMLManager xmlHistoryDatabase;
+    private XMLManager xmlDatabase;
     private XMLManager xmlSalesDatabase;
     private String[] typeOptions = { "horista", "assalariado", "comissionado" };
-    private String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao" };
+    private String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao", "hours", "sales" };
 
     public Facade() throws Exception {
-        this.xmlEmployeeDatabase = new XMLManager("employee", "employees");
-        this.xmlHistoryDatabase = new XMLManager("history", "employee_history");
-        // this.xmlSalesDatabase = new XMLManager("sales", "employee_sales");
-
-        this.employees = this.xmlEmployeeDatabase.readAndGetEmployeeFile();
-        this.employeesHistory = this.xmlHistoryDatabase.readAndGetHistoryFile();
-        // this.employeeSales = this.xmlSalesDatabase.readAndGetSalesFile();
-
-        System.out.println("Employees number " + this.employees.size());
+        this.xmlDatabase = new XMLManager("employees");
+        this.employees = this.xmlDatabase.readAndGetEmployeeFile();
     }
 
     public void zerarSistema() throws Exception {
         this.employees = new ArrayList<Employee>();
-        this.employeesHistory = new ArrayList<EmployeeHistory>();
 
-        this.xmlEmployeeDatabase.createAndSaveEmployeeDocument(this.employees);
-        this.xmlHistoryDatabase.createAndSaveHistoryDocument(this.employeesHistory);
+        this.xmlDatabase.createAndSaveEmployeeDocument(this.employees);
     }
 
     private List<Employee> getEmployeeById(String id) {
@@ -56,15 +42,15 @@ public class Facade {
         }
     }
 
-    public String getAtributoEmpregado(String id, String property) throws Exception  {
-        if(id.isEmpty())
+    public String getAtributoEmpregado(String employeeId, String property) throws Exception  {
+        if(employeeId.isEmpty())
             throw new Exception("Identificacao do empregado nao pode ser nula.");
         if(Arrays.stream(this.employeeProperties).noneMatch(item -> item.equals(property)))
             throw new Exception("Atributo nao existe.");
         if(this.employees.isEmpty())
             throw new Exception("Empregado nao existe.");
 
-        List<Employee> filteredEmployees = this.getEmployeeById(id);
+        List<Employee> filteredEmployees = this.getEmployeeById(employeeId);
 
         if(!filteredEmployees.isEmpty()) {
             Employee filteredEmployee = filteredEmployees.get(0);
@@ -133,12 +119,6 @@ public class Facade {
         return employee.getId();
     }
 
-    private List<EmployeeHistory> getEmployeeHistoryById(String employeeId) {
-        return this.employeesHistory.stream().filter(item -> item.getEmployeeId().equals(employeeId)).toList();
-    }
-
-    // private List<EmployeeSales> getEmployee
-
     private LocalDate verifyDate(String newDate, String type, boolean isStrict) throws Exception {
         LocalDate date;
 
@@ -165,26 +145,27 @@ public class Facade {
             throw new Exception("Data inicial nao pode ser posterior aa data final.");
         }
 
-        String employeeType = getAtributoEmpregado(employeeId, "tipo");
+        Employee employee = getEmployeeById(employeeId).getFirst();
+        String employeeType = employee.getType();
 
         if(!employeeType.equals("horista")) {
             throw new Exception("Empregado nao eh horista.");
         }
 
-        if(this.employeesHistory == null || this.employeesHistory.isEmpty()) return 0;
+        List<EmployeeTimestamp> employeeTimeStamp = employee.getTimestamp();
 
-        List<EmployeeHistory> filteredHistory = getEmployeeHistoryById(employeeId);
+        if(employeeTimeStamp.isEmpty()) return 0;
+
         int totalHours = 0;
 
-        if(!filteredHistory.isEmpty()) {
-            for (EmployeeHistory employeeHistory : filteredHistory) {
-                LocalDate date = employeeHistory.getDate();
+        for (EmployeeTimestamp timestamp : employeeTimeStamp) {
+            LocalDate date = timestamp.getDate();
 
-                if(date.isAfter(formattedStartDate) || date.isEqual(formattedStartDate)) {
-                    if(date.isBefore(formattedFinishDate)) {
-                        int validHour = (int) employeeHistory.getHours() > 8 ? 8 : (int) employeeHistory.getHours();
-                        totalHours += validHour;
-                    }
+            if(date.isAfter(formattedStartDate) || date.isEqual(formattedStartDate)) {
+                if(date.isBefore(formattedFinishDate)) {
+                    int validHour = (int) timestamp.getHours() > 8 ? 8 : (int) timestamp.getHours();
+
+                    totalHours += validHour;
                 }
             }
         }
@@ -193,24 +174,24 @@ public class Facade {
     }
 
     public String getHorasExtrasTrabalhadas(String employeeId, String startDate, String finishDate) throws Exception {
-        LocalDate formattedStartDate = this.verifyDate(startDate, "start", false);
-        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", false);
+        LocalDate formattedStartDate = this.verifyDate(startDate, "start", true);
+        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", true);
 
-        if(this.employeesHistory == null || this.employeesHistory.isEmpty()) return "0";
+        Employee employee = getEmployeeById(employeeId).getFirst();
+        List<EmployeeTimestamp> employeeTimeStampList = employee.getTimestamp();
 
-        List<EmployeeHistory> filteredHistory = getEmployeeHistoryById(employeeId);
+        if(employeeTimeStampList == null || employeeTimeStampList.isEmpty()) return "0";
+
         double totalHours = 0;
         int workedDays = 0;
 
-        if(!filteredHistory.isEmpty()) {
-            for (EmployeeHistory employeeHistory : filteredHistory) {
-                LocalDate date = employeeHistory.getDate();
+        for (EmployeeTimestamp timestamp : employeeTimeStampList) {
+            LocalDate date = timestamp.getDate();
 
-                if(date.isAfter(formattedStartDate) || date.isEqual(formattedStartDate)) {
-                    if(date.isBefore(formattedFinishDate)) {
-                        workedDays += 1;
-                        totalHours += employeeHistory.getHours();
-                    }
+            if(date.isAfter(formattedStartDate) || date.isEqual(formattedStartDate)) {
+                if(date.isBefore(formattedFinishDate)) {
+                    workedDays += 1;
+                    totalHours += timestamp.getHours();
                 }
             }
         }
@@ -223,15 +204,29 @@ public class Facade {
     }
 
     public void lancaCartao(String employeeId, String date, String hours) throws Exception {
-        String employeeType = getAtributoEmpregado(employeeId, "tipo");
+        if(employeeId.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
 
         LocalDate formattedDate = this.verifyDate(date, "", true);
 
-        if(!employeeType.equals("horista")) {
+        List<Employee> employeeList = getEmployeeById(employeeId);
+
+        if(employeeList.isEmpty()) {
+            throw new Exception("Empregado nao existe.");
+        }
+
+        Employee employee = employeeList.get(0);
+
+        if(!employee.getType().equals("horista")) {
             throw new Exception("Empregado nao eh horista.");
         }
 
-        String newId = "history_id_"+this.employeesHistory.size();
+        List<EmployeeTimestamp> timestamps = employee.getTimestamp();
+
+        String newId = employeeId+"_id_0";
+
+        if(!timestamps.isEmpty()) {
+            newId += timestamps.size();
+        }
 
         double formattedHours = Double.parseDouble(hours.replace(",", "."));
 
@@ -239,10 +234,13 @@ public class Facade {
             throw new Exception("Horas devem ser positivas.");
         }
 
-        EmployeeHistory newEmployeeHistory = new EmployeeHistory(newId, employeeId, formattedDate, formattedHours);
+        EmployeeTimestamp newTimestamp = new EmployeeTimestamp(newId, formattedDate, formattedHours);
 
-        this.employeesHistory.add(newEmployeeHistory);
-        saveHistoryInDatabase();
+        employee.setTimestamp(newTimestamp);
+
+        this.removerEmpregado(employeeId);
+        this.employees.add(employee);
+        saveEmployeeInDatabase();
     }
 
     public String criarEmpregado(String name, String address, String type, String remuneration) throws Exception {
@@ -251,12 +249,78 @@ public class Facade {
         return criarEmpregado(name, address, type, remuneration, "0");
     }
 
+    public void lancaVenda(String employeeId, String date, String value) throws Exception {
+        if(employeeId.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
+
+        LocalDate formattedDate = this.verifyDate(date, "", true);
+
+        List<Employee> employeeList = getEmployeeById(employeeId);
+
+        if(employeeList.isEmpty()) {
+            throw new Exception("Empregado nao existe.");
+        }
+
+        Employee employee = employeeList.get(0);
+
+        if(!employee.getType().equals("comissionado")) {
+            throw new Exception("Empregado nao eh comissionado.");
+        }
+
+        List<Sale> sales = employee.getSales();
+
+        String newId = employeeId+"_saleId_0";
+
+        if(!sales.isEmpty()) {
+            newId += sales.size();
+        }
+
+        double formattedValue = Double.parseDouble(value.replace(",", "."));
+
+        if(formattedValue <= 0) {
+            throw new Exception("Valor deve ser positivo.");
+        }
+
+        Sale newSale = new Sale(newId, formattedDate, formattedValue);
+
+        employee.setSale(newSale);
+
+        this.removerEmpregado(employeeId);
+        this.employees.add(employee);
+        saveEmployeeInDatabase();
+    }
+
     public String getVendasRealizadas(String employeeId, String startDate, String finishDate) throws Exception {
-        LocalDate formattedStartDate = this.verifyDate(startDate, "start", false);
-        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", false);
+        LocalDate formattedStartDate = this.verifyDate(startDate, "start", true);
+        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", true);
 
+        if(formattedStartDate.isAfter(formattedFinishDate)) {
+            throw new Exception("Data inicial nao pode ser posterior aa data final.");
+        }
 
-        return "";
+        Employee employee = getEmployeeById(employeeId).getFirst();
+        String employeeType = employee.getType();
+
+        if(!employeeType.equals("comissionado")) {
+            throw new Exception("Empregado nao eh comissionado.");
+        }
+
+        List<Sale> employeeSales = employee.getSales();
+
+        if(employeeSales.isEmpty()) return "0,00";
+
+        double totalHours = 0;
+
+        for (Sale sale : employeeSales) {
+            LocalDate date = sale.getDate();
+
+            if(date.isAfter(formattedStartDate) || date.isEqual(formattedStartDate)) {
+                if(date.isBefore(formattedFinishDate)) {
+                    totalHours += sale.getValue();
+                }
+            }
+        }
+
+        return String.format("%.2f", totalHours).replace('.', ',');
     }
 
     public void removerEmpregado(String employeeId) throws Exception {
@@ -271,19 +335,10 @@ public class Facade {
         saveEmployeeInDatabase();
     }
 
-    public void saveHistoryInDatabase() throws Exception {
-        try {
-            this.xmlHistoryDatabase.createAndSaveHistoryDocument(this.employeesHistory);
-            this.employeesHistory = this.xmlHistoryDatabase.readAndGetHistoryFile();
-        } catch(Exception error) {
-            error.printStackTrace();
-        }
-    }
-
     public boolean saveEmployeeInDatabase() throws Exception {
         try {
-            this.xmlEmployeeDatabase.createAndSaveEmployeeDocument(this.employees);
-            this.employees = this.xmlEmployeeDatabase.readAndGetEmployeeFile();
+            this.xmlDatabase.createAndSaveEmployeeDocument(this.employees);
+            this.employees = this.xmlDatabase.readAndGetEmployeeFile();
         } catch(Exception e) {
             e.printStackTrace();
             return false;

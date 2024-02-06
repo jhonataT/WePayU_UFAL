@@ -2,22 +2,18 @@ package br.ufal.ic.p2.wepayu.models;
 
 import java.time.LocalDate;
 
-public class EmployeeHistory {
+public class EmployeeTimestamp {
     private String id;
-    private String employeeId;
     private LocalDate date;
     private double hours;
 
-    public EmployeeHistory(String id, String employeeId, LocalDate date, double hours) {
+    public EmployeeTimestamp(String id, LocalDate date, double hours) {
         this.id = id;
-        this.employeeId = employeeId;
         this.date = date;
         this.hours = hours;
     }
 
     public String getId() { return this.id; }
-
-    public String getEmployeeId() { return this.employeeId; }
 
     public void setDate(LocalDate newDate) {
         this.date = newDate;

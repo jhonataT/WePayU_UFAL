@@ -1,8 +1,8 @@
 package br.ufal.ic.p2.wepayu.utils;
 
 import br.ufal.ic.p2.wepayu.models.Employee;
-import br.ufal.ic.p2.wepayu.models.EmployeeHistory;
-import br.ufal.ic.p2.wepayu.models.EmployeeSales;
+import br.ufal.ic.p2.wepayu.models.EmployeeTimestamp;
+import br.ufal.ic.p2.wepayu.models.Sale;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
@@ -15,19 +15,14 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
 public class XMLManager {
-    private String fileType;
     private String fileName;
     private File file;
-    public XMLManager(String fileType, String fileName) throws Exception {
+    public XMLManager(String fileName) throws Exception {
         try {
-            this.fileType = fileType;
             this.fileName = "src/br/ufal/ic/p2/wepayu/database/"+fileName+".xml";
             this.file = new File(this.fileName);
 
@@ -40,10 +35,6 @@ public class XMLManager {
     }
 
     public List<Employee> readAndGetEmployeeFile() throws Exception, ParserConfigurationException, IOException, SAXException {
-        if(!this.fileType.equals("employee")) {
-            throw new Exception("invalid method");
-        }
-
         List<Employee> newEmployeeListToReturn = new ArrayList<Employee>();
 
         try {
@@ -61,6 +52,9 @@ public class XMLManager {
 
                 if (employeeNode.getNodeType() == Node.ELEMENT_NODE) {
                     Element employeeElement = (Element) employeeNode;
+
+                    NodeList timestamps = employeeElement.getElementsByTagName("timestamp");
+                    NodeList sales = employeeElement.getElementsByTagName("sale");
 
                     // Obter informações do elemento "employee"
                     String id = employeeElement.getAttribute("id");
@@ -81,6 +75,46 @@ public class XMLManager {
                         Boolean.parseBoolean(unionized)
                     );
 
+                    for (int j = 0; j < timestamps.getLength(); j++) {
+                        Node timestampNode = timestamps.item(j);
+
+                        Element timestampElement = (Element) timestampNode;
+
+                        if(timestampNode.getNodeType() == Node.ELEMENT_NODE) {
+                            String timeStampId = timestampElement.getElementsByTagName("id").item(0).getTextContent();
+                            String timeStampDate = timestampElement.getElementsByTagName("date").item(0).getTextContent();
+                            String timeStampHours = timestampElement.getElementsByTagName("hours").item(0).getTextContent();
+
+                            EmployeeTimestamp newTimeStamp = new EmployeeTimestamp(
+                                timeStampId,
+                                DateFormat.stringToDate(timeStampDate, false),
+                                Double.parseDouble(timeStampHours)
+                            );
+
+                            newEmployee.setTimestamp(newTimeStamp);
+                        }
+                    }
+
+                    for (int k = 0; k < sales.getLength(); k++) {
+                        Node saleNode = sales.item(k);
+
+                        Element safeElement = (Element) saleNode;
+
+                        if(saleNode.getNodeType() == Node.ELEMENT_NODE) {
+                            String safeId = safeElement.getAttribute("id");
+                            String safeDate = safeElement.getElementsByTagName("date").item(0).getTextContent();
+                            String safeValue = safeElement.getElementsByTagName("value").item(0).getTextContent();
+
+                            Sale newSale = new Sale(
+                                safeId,
+                                DateFormat.stringToDate(safeDate, false),
+                                Double.parseDouble(safeValue)
+                            );
+
+                            newEmployee.setSale(newSale);
+                        }
+                    }
+
                     newEmployeeListToReturn.add(newEmployee);
                 }
             }
@@ -93,10 +127,6 @@ public class XMLManager {
 
 
     public void createAndSaveEmployeeDocument(List<Employee> newEmployeeList) throws Exception {
-        if(!this.fileType.equals("employee")) {
-            throw new Exception("invalid method");
-        }
-
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = dbf.newDocumentBuilder();
 
@@ -106,6 +136,9 @@ public class XMLManager {
         document.appendChild(rootElement);
 
         for (Employee newEmployee : newEmployeeList) {
+            List<EmployeeTimestamp> timestamps = newEmployee.getTimestamp();
+            List<Sale> sales = newEmployee.getSales();
+
             Element childElement = document.createElement("employee");
 
             Element childNameElement = document.createElement("name");
@@ -126,12 +159,53 @@ public class XMLManager {
             Element childUnionizedElement = document.createElement("unionized");
             childUnionizedElement.appendChild(document.createTextNode(Double.toString(newEmployee.getCommission())));
 
+            Element childTimestampsElement = document.createElement("timestamps");
+            Element childSalesElement = document.createElement("sales");
+
+            for(EmployeeTimestamp timestamp : timestamps) {
+                Element childTimestampElement = document.createElement("timestamp");
+
+                Element childtmIdElement = document.createElement("id");
+                childtmIdElement.appendChild(document.createTextNode(timestamp.getId()));
+
+                Element childtmDateElement = document.createElement("date");
+                childtmDateElement.appendChild(document.createTextNode(timestamp.getDate().toString()));
+
+                Element childtmHoursElement = document.createElement("hours");
+                childtmHoursElement.appendChild(document.createTextNode(Double.toString(timestamp.getHours())));
+
+                childTimestampsElement.appendChild(childTimestampElement);
+                childTimestampElement.appendChild(childtmIdElement);
+                childTimestampElement.appendChild(childtmDateElement);
+                childTimestampElement.appendChild(childtmHoursElement);
+            }
+
+            for(Sale sale : sales) {
+                Attr saleAttr = document.createAttribute("id");
+                saleAttr.setValue(sale.getId());
+
+                Element childSaleElement = document.createElement("sale");
+
+                Element childSafeDateElement = document.createElement("date");
+                childSafeDateElement.appendChild(document.createTextNode(sale.getDate().toString()));
+
+                Element childSafeHoursElement = document.createElement("value");
+                childSafeHoursElement.appendChild(document.createTextNode(Double.toString(sale.getValue())));
+
+                childSalesElement.appendChild(childSaleElement);
+                childSaleElement.setAttributeNode(saleAttr);
+                childSaleElement.appendChild(childSafeDateElement);
+                childSaleElement.appendChild(childSafeHoursElement);
+            }
+
             Attr attr = document.createAttribute("id");
             attr.setValue(newEmployee.getId());
             childElement.setAttributeNode(attr);
 
             rootElement.appendChild(childElement);
             childElement.appendChild(childNameElement);
+            childElement.appendChild(childTimestampsElement);
+            childElement.appendChild(childSalesElement);
             childElement.appendChild(childAddressElement);
             childElement.appendChild(childTypeElement);
             childElement.appendChild(childRemunerationElement);
@@ -147,171 +221,4 @@ public class XMLManager {
         t.transform(domSource, streamResult);
     }
 
-    public void createAndSaveSalesDocument(List<EmployeeSales> newSales) throws Exception {
-        if(!this.fileType.equals("sales")) {
-            throw new Exception("invalid method");
-        }
-
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = dbf.newDocumentBuilder();
-
-        Document document = db.newDocument();
-
-        Element rootElement = document.createElement("EmployeesSales");
-        document.appendChild(rootElement);
-
-        for (EmployeeSales newSale : newSales) {
-            Element childElement = document.createElement("sale");
-
-            Element childEmployeeIdElement = document.createElement("employeeId");
-            childEmployeeIdElement.appendChild(document.createTextNode(newSale.getEmployeeId()));
-
-            Element childDateElement = document.createElement("date");
-            childDateElement.appendChild(document.createTextNode(newSale.getDate().toString()));
-
-            Element childValueElement = document.createElement("value");
-            childValueElement.appendChild(document.createTextNode(Double.toString(newSale.getValue())));
-
-            Attr attr = document.createAttribute("id");
-            attr.setValue(newSale.getId());
-            childElement.setAttributeNode(attr);
-
-            rootElement.appendChild(childElement);
-            childElement.appendChild(childEmployeeIdElement);
-            childElement.appendChild(childDateElement);
-            childElement.appendChild(childValueElement);
-        }
-
-        TransformerFactory tf = TransformerFactory.newInstance();
-        Transformer t = tf.newTransformer();
-        DOMSource domSource = new DOMSource(document);
-        StreamResult streamResult = new StreamResult(this.file);
-
-        t.transform(domSource, streamResult);
-    }
-
-    public void createAndSaveHistoryDocument(List<EmployeeHistory> newHistoryList) throws Exception {
-        if(!this.fileType.equals("history")) {
-            throw new Exception("invalid method");
-        }
-
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = dbf.newDocumentBuilder();
-
-        Document document = db.newDocument();
-
-        Element rootElement = document.createElement("EmployeesHistory");
-        document.appendChild(rootElement);
-
-        for (EmployeeHistory newHistory : newHistoryList) {
-            Element childElement = document.createElement("history");
-
-            Element childEmployeeIdElement = document.createElement("employeeId");
-            childEmployeeIdElement.appendChild(document.createTextNode(newHistory.getEmployeeId()));
-
-            Element childDateElement = document.createElement("date");
-            childDateElement.appendChild(document.createTextNode(newHistory.getDate().toString()));
-
-            Element childHoursElement = document.createElement("hours");
-            childHoursElement.appendChild(document.createTextNode(Double.toString(newHistory.getHours())));
-
-            Attr attr = document.createAttribute("id");
-            attr.setValue(newHistory.getId());
-            childElement.setAttributeNode(attr);
-
-            rootElement.appendChild(childElement);
-            childElement.appendChild(childEmployeeIdElement);
-            childElement.appendChild(childDateElement);
-            childElement.appendChild(childHoursElement);
-        }
-
-        TransformerFactory tf = TransformerFactory.newInstance();
-        Transformer t = tf.newTransformer();
-        DOMSource domSource = new DOMSource(document);
-        StreamResult streamResult = new StreamResult(this.file);
-
-        t.transform(domSource, streamResult);
-    }
-
-    public List<EmployeeSales> readAndGetSalesFile() throws Exception {
-        if(!this.fileType.equals("sales")) {
-            throw new Exception("invalid method");
-        }
-
-        List<EmployeeSales> newSalesListToReturn = new ArrayList<EmployeeSales>();
-
-        try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-
-            Document document = builder.parse(this.fileName);
-
-            Element rootElement = document.getDocumentElement();
-
-            NodeList saleList = rootElement.getElementsByTagName("sale");
-
-            for (int i = 0; i < saleList.getLength(); i++) {
-                Node saleNode = saleList.item(i);
-
-                if (saleNode.getNodeType() == Node.ELEMENT_NODE) {
-                    Element employeeElement = (Element) saleNode;
-
-                    // Obter informações do elemento "employee"
-                    String id = employeeElement.getAttribute("id");
-                    String employeeId = employeeElement.getElementsByTagName("employeeId").item(0).getTextContent();
-                    String date = employeeElement.getElementsByTagName("date").item(0).getTextContent();
-                    String value = employeeElement.getElementsByTagName("value").item(0).getTextContent();
-
-                    EmployeeSales newSale = new EmployeeSales(id, employeeId, DateFormat.stringToDate(date, false), Double.parseDouble(value));
-
-                    newSalesListToReturn.add(newSale);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return newSalesListToReturn;
-    }
-
-    public List<EmployeeHistory> readAndGetHistoryFile() throws Exception {
-        if(!this.fileType.equals("history")) {
-            throw new Exception("invalid method");
-        }
-
-        List<EmployeeHistory> newHistoryListToReturn = new ArrayList<EmployeeHistory>();
-
-        try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-
-            Document document = builder.parse(this.fileName);
-
-            Element rootElement = document.getDocumentElement();
-
-            NodeList historyList = rootElement.getElementsByTagName("history");
-
-            for (int i = 0; i < historyList.getLength(); i++) {
-                Node historyNode = historyList.item(i);
-
-                if (historyNode.getNodeType() == Node.ELEMENT_NODE) {
-                    Element employeeElement = (Element) historyNode;
-
-                    // Obter informações do elemento "employee"
-                    String id = employeeElement.getAttribute("id");
-                    String employeeId = employeeElement.getElementsByTagName("employeeId").item(0).getTextContent();
-                    String date = employeeElement.getElementsByTagName("date").item(0).getTextContent();
-                    String hours = employeeElement.getElementsByTagName("hours").item(0).getTextContent();
-
-                    EmployeeHistory newHistory = new EmployeeHistory(id, employeeId, DateFormat.stringToDate(date, false), Double.parseDouble(hours));
-
-                    newHistoryListToReturn.add(newHistory);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return newHistoryListToReturn;
-    }
 }
