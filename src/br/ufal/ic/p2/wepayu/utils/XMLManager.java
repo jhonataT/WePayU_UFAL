@@ -1,7 +1,7 @@
 package br.ufal.ic.p2.wepayu.utils;
 
 import br.ufal.ic.p2.wepayu.models.Employee;
-import br.ufal.ic.p2.wepayu.models.EmployeeTimestamp;
+import br.ufal.ic.p2.wepayu.models.Timestamp;
 import br.ufal.ic.p2.wepayu.models.Sale;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
@@ -85,7 +85,7 @@ public class XMLManager {
                             String timeStampDate = timestampElement.getElementsByTagName("date").item(0).getTextContent();
                             String timeStampHours = timestampElement.getElementsByTagName("hours").item(0).getTextContent();
 
-                            EmployeeTimestamp newTimeStamp = new EmployeeTimestamp(
+                            Timestamp newTimeStamp = new Timestamp(
                                 timeStampId,
                                 DateFormat.stringToDate(timeStampDate, false),
                                 Double.parseDouble(timeStampHours)
@@ -136,7 +136,7 @@ public class XMLManager {
         document.appendChild(rootElement);
 
         for (Employee newEmployee : newEmployeeList) {
-            List<EmployeeTimestamp> timestamps = newEmployee.getTimestamp();
+            List<Timestamp> timestamps = newEmployee.getTimestamp();
             List<Sale> sales = newEmployee.getSales();
 
             Element childElement = document.createElement("employee");
@@ -162,7 +162,7 @@ public class XMLManager {
             Element childTimestampsElement = document.createElement("timestamps");
             Element childSalesElement = document.createElement("sales");
 
-            for(EmployeeTimestamp timestamp : timestamps) {
+            for(Timestamp timestamp : timestamps) {
                 Element childTimestampElement = document.createElement("timestamp");
 
                 Element childtmIdElement = document.createElement("id");

@@ -2,12 +2,12 @@ package br.ufal.ic.p2.wepayu.models;
 
 import java.time.LocalDate;
 
-public class EmployeeTimestamp {
+public class Timestamp {
     private String id;
     private LocalDate date;
     private double hours;
 
-    public EmployeeTimestamp(String id, LocalDate date, double hours) {
+    public Timestamp(String id, LocalDate date, double hours) {
         this.id = id;
         this.date = date;
         this.hours = hours;

@@ -13,7 +13,10 @@ public class Employee {
     private double commission;
     private boolean unionized;
     private List<Sale> saleList;
-    private List<EmployeeTimestamp> timestamp;
+    private List<Timestamp> timestamp;
+
+    private Syndicate linkedSyndicate;
+    private double unionFee;
 
     public Employee(String id, String name, String address, String type, double remuneration, double commission, boolean unionized) {
         this.id = id;
@@ -27,6 +30,14 @@ public class Employee {
         this.timestamp = new ArrayList<>();
     }
 
+    public Employee(String id, String name, String type, double remuneration, List<Sale> sales) {
+        this.id = id;
+        this.name = name;
+        this.type = type;
+        this.remuneration = remuneration;
+        this.saleList = sales;
+    }
+
     public String getName() {
         return this.name;
     }
@@ -38,6 +49,22 @@ public class Employee {
     public Boolean getUnionized()  {
         return this.unionized;
     }
+
+    public void setUnionized(boolean newValue) {
+        this.unionized = newValue;
+    }
+
+    public void setLinkedSyndicate(Syndicate newSyndicate) {
+        this.linkedSyndicate = newSyndicate;
+    }
+
+    public Syndicate getLinkedSyndicate() { return this.linkedSyndicate; }
+
+    public void setUnionFee(double newUnionFee) {
+        this.unionFee = newUnionFee;
+    }
+
+    public double getUnionFee() { return this.unionFee; }
 
     public void setName(String newName) {
         this.name = newName;
@@ -75,7 +102,7 @@ public class Employee {
         return this.saleList;
     }
 
-    public List<EmployeeTimestamp> getTimestamp() {
+    public List<Timestamp> getTimestamp() {
         return this.timestamp;
     }
 
@@ -83,7 +110,7 @@ public class Employee {
         this.saleList.add(newSale);
     }
 
-    public void setTimestamp(EmployeeTimestamp newTimeStamp) {
+    public void setTimestamp(Timestamp newTimeStamp) {
         this.timestamp.add(newTimeStamp);
     }
 
