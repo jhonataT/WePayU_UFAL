@@ -149,10 +149,15 @@ public class Facade {
             throw new Exception("Data inicial nao pode ser posterior aa data final.");
         }
 
-        Employee employee = getEmployeeById(employeeId).getFirst();
-        String employeeType = employee.getType();
+        List<Employee> employeeList = getEmployeeById(employeeId);
 
-        if(!employeeType.equals("horista")) {
+        if(employeeList.isEmpty()) {
+            throw new Exception("Empregado nao existe.");
+        }
+
+        Employee employee = employeeList.get(0);
+
+        if(!employee.getType().equals("horista")) {
             throw new Exception("Empregado nao eh horista.");
         }
 
@@ -181,7 +186,13 @@ public class Facade {
         LocalDate formattedStartDate = this.verifyDate(startDate, "start", true);
         LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", true);
 
-        Employee employee = getEmployeeById(employeeId).getFirst();
+        List<Employee> employeeList = getEmployeeById(employeeId);
+
+        if(employeeList.isEmpty())
+            throw new Exception("Empregado nao existe.");
+
+        Employee employee = employeeList.get(0);
+
         List<Timestamp> employeeTimeStampList = employee.getTimestamp();
 
         if(employeeTimeStampList == null || employeeTimeStampList.isEmpty()) return "0";
@@ -301,10 +312,15 @@ public class Facade {
             throw new Exception("Data inicial nao pode ser posterior aa data final.");
         }
 
-        Employee employee = getEmployeeById(employeeId).getFirst();
-        String employeeType = employee.getType();
+        List<Employee> employeeList = getEmployeeById(employeeId);
 
-        if(!employeeType.equals("comissionado")) {
+        if(employeeList.isEmpty()) {
+            throw new Exception("Empregado nao existe.");
+        }
+
+        Employee employee = employeeList.get(0);
+
+        if(!employee.getType().equals("comissionado")) {
             throw new Exception("Empregado nao eh comissionado.");
         }
 
@@ -336,7 +352,7 @@ public class Facade {
             throw new Exception("Empregado nao existe.");
         }
 
-        Employee employee = employeeList.getFirst();
+        Employee employee = employeeList.get(0);
 
         if(property.equals("sindicalizado")) {
             boolean isUnionized = Boolean.parseBoolean(value);
@@ -349,11 +365,16 @@ public class Facade {
                 List<Syndicate> filteredSyndicates = getSyndicateById(syndicateId);
                 Syndicate syndicate;
 
+                System.out.println("BEFORE CREATE -> "+filteredSyndicates.size());
+
                 if(filteredSyndicates.isEmpty()) {
+                    System.out.println("CREATE ");
                     syndicate = new Syndicate(syndicateId);
                 } else {
-                    syndicate = filteredSyndicates.getFirst();
+                    syndicate = filteredSyndicates.get(0);
                 }
+
+                this.syndicates.add(syndicate);
 
                 UnionizedEmployee syndicateEmployee = syndicate.getEmployeeById(employeeId);
 
@@ -395,7 +416,7 @@ public class Facade {
         if(filteredSyndicates.isEmpty())
             throw new Exception("Membro nao existe.");
 
-        Syndicate syndicate = filteredSyndicates.getFirst();
+        Syndicate syndicate = filteredSyndicates.get(0);
 
         String newId = "unionFee_id_" + (syndicate.getUnionFeeList().isEmpty() ? 0 : syndicate.getUnionFeeList().size());
 
@@ -403,22 +424,25 @@ public class Facade {
         syndicate.addNewUnionFee(newUnionFee);
     }
 
-    public String getTaxasServico(String syndicateId, String startDate, String finishDate) throws Exception {
+    public String getTaxasServico(String employeeId, String startDate, String finishDate) throws Exception {
         LocalDate formattedStartDate = this.verifyDate(startDate, "start", true);
         LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", true);
 
-        List<Syndicate> filteredSyndicates = getSyndicateById(syndicateId);
+        List<Employee> filteredEmployees = getEmployeeById(employeeId);
 
-        if(filteredSyndicates.isEmpty())
+        System.out.println("filteredEmployees SIZE -> "+filteredEmployees.size());
+
+        if(filteredEmployees.isEmpty())
             throw new Exception("Membro nao existe.");
 
-        Syndicate syndicate = filteredSyndicates.getFirst();
+        // Create method to get Employees unionized;
+        Employee employee = filteredEmployees.get(0);
 
         double totalValue = 0;
 
-        List<UnionFee> unionFeeList = syndicate.getUnionFeeList();
+        // List<UnionFee> unionFeeList = employee.getUnionFeeList();
 
-        for (UnionFee unionFee : unionFeeList) {
+        /*for (UnionFee unionFee : unionFeeList) {
             LocalDate date = unionFee.getDate();
 
             if(date.isAfter(formattedStartDate) || date.isEqual(formattedStartDate)) {
@@ -426,7 +450,7 @@ public class Facade {
                     totalValue += unionFee.getValue();
                 }
             }
-        }
+        }*/
 
         return String.format("%.2f", totalValue).replace('.', ',');
     }

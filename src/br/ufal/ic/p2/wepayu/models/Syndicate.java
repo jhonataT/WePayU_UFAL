@@ -36,7 +36,7 @@ public class Syndicate {
             return null;
         }
 
-        return filteredEmployees.getFirst();
+        return filteredEmployees.get(0);
     }
 
     public String getId() { return this.id; }
