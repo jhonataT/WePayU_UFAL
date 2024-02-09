@@ -1,21 +1,18 @@
 package br.ufal.ic.p2.wepayu.utils;
 
 import br.ufal.ic.p2.wepayu.models.Employee;
+import br.ufal.ic.p2.wepayu.models.EmployeeBank;
 import br.ufal.ic.p2.wepayu.models.Timestamp;
 import br.ufal.ic.p2.wepayu.models.Sale;
 import org.w3c.dom.*;
-import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,8 +70,23 @@ public class XMLEmployeeManager {
                     String type = employeeElement.getElementsByTagName("type").item(0).getTextContent();
                     String remuneration = employeeElement.getElementsByTagName("remuneration").item(0).getTextContent();
                     String commission = employeeElement.getElementsByTagName("commission").item(0).getTextContent();
+                    String formOfPayment = employeeElement.getElementsByTagName("formOfPayment").item(0).getTextContent();
                     String unionized = employeeElement.getElementsByTagName("unionized").item(0).getTextContent();
                     String syndicateId = employeeElement.getElementsByTagName("syndicateId").item(0).getTextContent();
+
+                    Element bankNameElement = (Element) employeeElement.getElementsByTagName("bankName").item(0);
+                    Element bankBranchElement = (Element) employeeElement.getElementsByTagName("bankBranch").item(0);
+                    Element currentAccountElement = (Element) employeeElement.getElementsByTagName("currentAccount").item(0);
+
+                    String bankName = "";
+                    String bankBranch = "";
+                    String currentAccount = "";
+
+                    if(bankNameElement != null && bankBranchElement != null && currentAccountElement != null) {
+                        bankName = bankNameElement.getTextContent();
+                        bankBranch = employeeElement.getElementsByTagName("bankBranch").item(0).getTextContent();
+                        currentAccount = employeeElement.getElementsByTagName("currentAccount").item(0).getTextContent();
+                    }
 
                     Employee newEmployee = new Employee(
                         id,
@@ -86,7 +98,12 @@ public class XMLEmployeeManager {
                         Boolean.parseBoolean(unionized)
                     );
 
+                    if(formOfPayment.equals("banco") && !bankName.isEmpty() && !bankBranch.isEmpty() && !currentAccount.isEmpty()) {
+                        newEmployee.setEmployeeBank(bankName, bankBranch, currentAccount);
+                    }
+
                     newEmployee.setLinkedSyndicate(syndicateId);
+                    newEmployee.setFormOfPayment(formOfPayment);
 
                     for (int j = 0; j < timestamps.getLength(); j++) {
                         Node timestampNode = timestamps.item(j);
@@ -169,6 +186,28 @@ public class XMLEmployeeManager {
             Element childComissionElement = document.createElement("commission");
             childComissionElement.appendChild(document.createTextNode(Double.toString(newEmployee.getCommission())));
 
+            Element childPaymentElement = document.createElement("formOfPayment");
+            childPaymentElement.appendChild(document.createTextNode(newEmployee.getFormOfPayment()));
+
+            Element childBankElement = document.createElement("bank");
+
+            EmployeeBank bankInfo = newEmployee.getEmployeeBank();
+
+            if(bankInfo != null) {
+                Element childBankNameElement = document.createElement("bankName");
+                childBankNameElement.appendChild(document.createTextNode(bankInfo.getBankName()));
+
+                Element childBankBranchElement = document.createElement("bankBranch");
+                childBankBranchElement.appendChild(document.createTextNode(bankInfo.getBankBranch()));
+
+                Element childCurrentAccountElement = document.createElement("currentAccount");
+                childCurrentAccountElement.appendChild(document.createTextNode(bankInfo.getCurrentAccount()));
+
+                childBankElement.appendChild(childBankNameElement);
+                childBankElement.appendChild(childBankBranchElement);
+                childBankElement.appendChild(childCurrentAccountElement);
+            }
+
             Element childUnionizedElement = document.createElement("unionized");
             childUnionizedElement.appendChild(document.createTextNode(Boolean.toString(newEmployee.getUnionized())));
 
@@ -228,6 +267,8 @@ public class XMLEmployeeManager {
             childElement.appendChild(childTypeElement);
             childElement.appendChild(childRemunerationElement);
             childElement.appendChild(childComissionElement);
+            childElement.appendChild(childBankElement);
+            childElement.appendChild(childPaymentElement);
             childElement.appendChild(childUnionizedElement);
             childElement.appendChild(childSyndicatesElement);
             childSyndicatesElement.appendChild(childSyndicateElement);

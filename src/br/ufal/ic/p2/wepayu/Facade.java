@@ -14,7 +14,8 @@ public class Facade {
     private final XMLEmployeeManager xmlDatabase;
     private final XMLSyndicateManager xmlSyndicateDb;
     private final String[] typeOptions = { "horista", "assalariado", "comissionado" };
-    private final String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao", "hours", "sales" };
+    private final String[] formOfPaymentOptions = { "banco", "correios", "emMaos" };
+    private final String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao", "hours", "sales", "banco" };
 
     public Facade() throws Exception {
         this.xmlDatabase = new XMLEmployeeManager("employees");
@@ -81,29 +82,50 @@ public class Facade {
     public String getAtributoEmpregado(String employeeId, String property) throws Exception  {
         if(employeeId.isEmpty())
             throw new Exception("Identificacao do empregado nao pode ser nula.");
-        if(Arrays.stream(this.employeeProperties).noneMatch(item -> item.equals(property)))
-            throw new Exception("Atributo nao existe.");
-        if(this.employees.isEmpty())
-            throw new Exception("Empregado nao existe.");
+        // if(Arrays.stream(this.employeeProperties).noneMatch(item -> item.equals(property)))
+           //  throw new Exception("Atributo nao existe.");
 
         Employee employee = this.getEmployeeById(employeeId);
 
-        if(property.equals("nome"))
+        if(property.equals("nome")) {
             return employee.getName();
-        if(property.equals("id"))
+        } else if(property.equals("id")) {
             return employee.getId();
-        else if(property.equals("endereco"))
-            return employee.getAddress();
-        else if(property.equals("tipo"))
-            return employee.getType();
-        else if(property.equals("salario"))
-            return String.format("%.2f", employee.getRemuneration()).replace('.', ',');
-        else if(property.equals("sindicalizado"))
-            return Boolean.toString(employee.getUnionized());
-        else if(property.equals("comissao"))
-            return String.format("%.2f", employee.getCommission()).replace('.', ',');
+        } else if(property.equals("banco") || property.equals("agencia")  || property.equals("contaCorrente") ) {
+            EmployeeBank bankInfo = employee.getEmployeeBank();
+            if(!employee.getFormOfPayment().equals("banco") || bankInfo == null)
+                throw new Exception("Empregado nao recebe em banco.");
 
-        throw new Exception("Empregado nao existe.");
+            return property.equals("banco") ? bankInfo.getBankName()
+                : property.equals("agencia") ?
+                bankInfo.getBankBranch() :
+                bankInfo.getCurrentAccount();
+        } else if(property.equals("idSindicato") || property.equals("taxaSindical")) {
+            String employeeSyndicateId = employee.getLinkedSyndicateId();
+            Syndicate syndicate = getSyndicateById(employeeSyndicateId);
+
+            if(!employee.getUnionized() || employeeSyndicateId == null) throw new Exception("Empregado nao eh sindicalizado.");
+
+            String value = String.format("%.2f", syndicate.getEmployeeById(employee.getId()).getValue()).replace('.', ',');
+
+            return property.equals("idSindicato") ? employeeSyndicateId : value;
+        } else if(property.equals("endereco")) {
+            return employee.getAddress();
+        } else if(property.equals("tipo")) {
+            return employee.getType();
+        } else if(property.equals("salario")) {
+            return String.format("%.2f", employee.getRemuneration()).replace('.', ',');
+        } else if(property.equals("sindicalizado")) {
+            return Boolean.toString(employee.getUnionized());
+        } else if(property.equals("comissao")) {
+            if(!employee.getType().equals("comissionado"))
+                throw new Exception("Empregado nao eh comissionado.");
+            return String.format("%.2f", employee.getCommission()).replace('.', ',');
+        } else if (property.equals("metodoPagamento")) {
+            return employee.getFormOfPayment();
+        } else {
+            throw new Exception("Atributo nao existe.");
+        }
     }
 
     public String getEmpregadoPorNome(String employeeName, int index) throws Exception {
@@ -333,12 +355,113 @@ public class Facade {
         return String.format("%.2f", totalHours).replace('.', ',');
     }
 
+    public void alteraEmpregado(String employeeId, String property, String value, String commission) throws Exception {
+        if(employeeId.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
+
+        Employee filteredEmployee = getEmployeeById(employeeId);
+
+        if(property.equals("tipo")) {
+            filteredEmployee.setType(value);
+
+            if(value.equals("comissionado")) {
+                double formattedValue = Double.parseDouble(commission.replace(',', '.'));
+                filteredEmployee.setCommission(formattedValue);
+            } else if(value.equals("horista")) {
+                int formattedValue = Integer.parseInt(commission.replace(',', '.'));
+                filteredEmployee.setRemuneration(formattedValue);
+            }
+        } else {
+            throw new Exception("Atributo nao existe.");
+        }
+    }
+
+    public void alteraEmpregado(String employeeId, String property, String value, String bankName, String bankBranch, String currentAccount) throws Exception {
+        if(employeeId.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
+
+        Employee filteredEmployee = getEmployeeById(employeeId);
+
+        if(property.equals("metodoPagamento") && value.equals("banco")) {
+            if(bankName == null || bankName.isEmpty())
+                throw new Exception("Banco nao pode ser nulo.");
+
+            if(bankBranch == null || bankBranch.isEmpty())
+                throw new Exception("Agencia nao pode ser nulo.");
+
+            if(currentAccount == null || currentAccount.isEmpty())
+                throw new Exception("Conta corrente nao pode ser nulo.");
+
+            filteredEmployee.setFormOfPayment(value);
+            filteredEmployee.setEmployeeBank(bankName, bankBranch, currentAccount);
+        }
+    }
+
     public void alteraEmpregado(String employeeId, String property, String value, String syndicateId, String unionFee) throws Exception {
         if(employeeId.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
 
         Employee filteredEmployee = getEmployeeById(employeeId);
 
-        if(property.equals("sindicalizado")) {
+        if(property.equals("nome")) {
+            if(value == null || value.isEmpty())
+                throw new Exception("Nome nao pode ser nulo.");
+
+            filteredEmployee.setName(value);
+        } else if(property.equals("endereco")) {
+            if(value == null || value.isEmpty())
+                throw new Exception("Endereco nao pode ser nulo.");
+
+            filteredEmployee.setAddress(value);
+        } else if(property.equals("tipo")) {
+            if(Arrays.stream(this.typeOptions).noneMatch(item -> item.equals(value)))
+                throw new Exception("Tipo invalido.");
+
+            filteredEmployee.setType(value);
+        } else if(property.equals("metodoPagamento")) {
+            if(Arrays.stream(this.formOfPaymentOptions).noneMatch(item -> item.equals(value)))
+                throw new Exception("Metodo de pagamento invalido.");
+
+            filteredEmployee.setFormOfPayment(value);
+        } else if(property.equals("salario")) {
+            if(value == null || value.isEmpty())
+                throw new Exception("Salario nao pode ser nulo.");
+
+            if(!this.isNumeric(value))
+                throw new Exception("Salario deve ser numerico.");
+
+            if(Integer.parseInt(value) <= 0)
+                throw new Exception("Salario deve ser nao-negativo.");
+
+            filteredEmployee.setRemuneration(Integer.parseInt(value));
+        } else if(property.equals("comissao")) {
+            if(!filteredEmployee.getType().equals("comissionado"))
+                throw new Exception("Empregado nao eh comissionado.");
+
+            if(value.isEmpty())
+                throw new Exception("Comissao nao pode ser nula.");
+
+            if(!this.isNumeric(value.replace(',', '.')))
+                throw new Exception("Comissao deve ser numerica.");
+
+            if(Double.parseDouble(value.replace(',', '.')) <= 0)
+                throw new Exception("Comissao deve ser nao-negativa.");
+
+            double formattedValue = Double.parseDouble(value.replace(',', '.'));
+            filteredEmployee.setCommission(formattedValue);
+        } else if(property.equals("sindicalizado")) {
+            if(!value.equals("false") && !value.equals("true"))
+                throw new Exception("Valor deve ser true ou false.");
+
+            if(syndicateId.isEmpty())
+                throw new Exception("Identificacao do sindicato nao pode ser nula.");
+
+            if(unionFee.isEmpty())
+                throw new Exception("Taxa sindical nao pode ser nula.");
+
+            if(!this.isNumeric(unionFee.replace(',', '.')))
+               throw new Exception("Taxa sindical deve ser numerica.");
+
+            if(Double.parseDouble(unionFee.replace(",", ".")) <= 0)
+              throw new Exception("Taxa sindical deve ser nao-negativa.");
+
             boolean isUnionized = Boolean.parseBoolean(value);
 
             filteredEmployee.setUnionized(isUnionized);
@@ -383,6 +506,8 @@ public class Facade {
 
                 this.employees.put(employeeId, filteredEmployee);
             }
+        } else {
+            throw new Exception("Atributo nao existe.");
         }
     }
 
@@ -457,7 +582,19 @@ public class Facade {
     }
 
     public void alteraEmpregado(String employeeId, String property, String value) throws Exception {
-        this.alteraEmpregado(employeeId, property, value, "", "0");
+        if(employeeId == null || employeeId.isEmpty())
+            throw new Exception("Identificacao do empregado nao pode ser nula.");
+
+        if(property.equals("sindicalizado")) {
+            Employee filteredEmployee = getEmployeeById(employeeId);
+
+            if(!value.equals("false") && !value.equals("true"))
+                throw new Exception("Valor deve ser true ou false.");
+
+            filteredEmployee.setUnionized(Boolean.parseBoolean(value));
+        } else {
+            this.alteraEmpregado(employeeId, property, value, "", "0");
+        }
     }
 
     public void removerEmpregado(String employeeId) throws Exception {

@@ -11,10 +11,12 @@ public class Employee {
     private double remuneration;
     private double commission;
     private boolean unionized;
-    private List<Sale> saleList;
+    private final List<Sale> saleList;
     private List<Timestamp> timestamp;
     private String linkedSyndicateId;
     private double unionFee;
+    private String formOfPayment;
+    private EmployeeBank bankInfo;
 
     public Employee(String id, String name, String address, String type, double remuneration, double commission, boolean unionized) {
         this.id = id;
@@ -26,6 +28,8 @@ public class Employee {
         this.unionized = unionized;
         this.saleList = new ArrayList<>();
         this.timestamp = new ArrayList<>();
+        this.formOfPayment = "emMaos";
+        this.bankInfo = new EmployeeBank();
     }
 
     public Employee(String id, String name, String type, double remuneration, List<Sale> sales, boolean unionized) {
@@ -81,12 +85,16 @@ public class Employee {
         return this.type;
     }
 
-    public void setTypo(String newType) {
+    public void setType(String newType) {
         this.type = newType;
     }
 
     public double getRemuneration() {
         return this.remuneration;
+    }
+
+    public void setCommission(double newCommission) {
+        this.commission = newCommission;
     }
 
     public double getCommission() {
@@ -101,12 +109,28 @@ public class Employee {
         return this.saleList;
     }
 
+    public void setFormOfPayment(String newFormOfPayment) {
+        this.formOfPayment = newFormOfPayment;
+    }
+
+    public String getFormOfPayment() { return this.formOfPayment; }
+
     public List<Timestamp> getTimestamp() {
         return this.timestamp;
     }
 
     public void setSale(Sale newSale) {
         this.saleList.add(newSale);
+    }
+
+    public EmployeeBank getEmployeeBank() {
+        return this.bankInfo;
+    }
+
+    public void setEmployeeBank(String bankName, String bankBranch, String currentAccount) {
+        this.bankInfo.setBankName(bankName);
+        this.bankInfo.setBankBranch(bankBranch);
+        this.bankInfo.setCurrentAccount(currentAccount);
     }
 
     public void setTimestamp(Timestamp newTimeStamp) {
