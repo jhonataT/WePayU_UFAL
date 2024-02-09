@@ -7,14 +7,14 @@ public class Main {
         String facade = "br.ufal.ic.p2.wepayu.Facade";
         EasyAccept.main(new String[]{facade, "tests/us1.txt"}); // ok
         EasyAccept.main(new String[]{facade, "tests/us1_1.txt"}); // ok
-        EasyAccept.main(new String[]{facade, "tests/us2.txt"});
-        EasyAccept.main(new String[]{facade, "tests/us2_1.txt"});
-        EasyAccept.main(new String[]{facade, "tests/us3.txt"});
-        EasyAccept.main(new String[]{facade, "tests/us3_1.txt"});
-        EasyAccept.main(new String[]{facade, "tests/us4.txt"});
-        EasyAccept.main(new String[]{facade, "tests/us4_1.txt"});
-        EasyAccept.main(new String[]{facade, "tests/us5.txt"});
-        // EasyAccept.main(new String[]{facade, "tests/us5_1.txt"});
+        EasyAccept.main(new String[]{facade, "tests/us2.txt"}); // ok
+        EasyAccept.main(new String[]{facade, "tests/us2_1.txt"}); // ok
+        EasyAccept.main(new String[]{facade, "tests/us3.txt"}); // ok
+        EasyAccept.main(new String[]{facade, "tests/us3_1.txt"}); // ok
+        EasyAccept.main(new String[]{facade, "tests/us4.txt"}); // ok
+        EasyAccept.main(new String[]{facade, "tests/us4_1.txt"}); // ok
+        EasyAccept.main(new String[]{facade, "tests/us5.txt"}); // ok
+        EasyAccept.main(new String[]{facade, "tests/us5_1.txt"}); // ok
 
 //        EasyAccept.main(new String[]{facade, "tests/us5_2.txt"});
 //        EasyAccept.main(new String[]{facade, "tests/us6_1.txt"});
