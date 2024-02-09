@@ -40,7 +40,8 @@ public class Facade {
 
     private Employee getEmployeeBySyndicate(String syndicateId) {
         for (Employee employee : this.employees.values()) {
-            if (employee.getLinkedSyndicateId().equals(syndicateId)) {
+            String linkedSyndicateId = employee.getLinkedSyndicateId();
+            if (linkedSyndicateId != null && linkedSyndicateId.equals(syndicateId)) {
                 return employee;
             }
         }
@@ -352,7 +353,7 @@ public class Facade {
 
                 Syndicate syndicate = getSyndicateById(syndicateId);
 
-                if(syndicate.getId().isEmpty()) syndicate = new Syndicate(syndicateId);
+                if(syndicate == null) syndicate = new Syndicate(syndicateId);
 
                 this.syndicates.put(syndicateId, syndicate);
 
@@ -397,7 +398,7 @@ public class Facade {
 
         Syndicate syndicate = getSyndicateById(syndicateId);
 
-        if(syndicate.getId().isEmpty())
+        if(syndicate == null)
             throw new Exception("Membro nao existe.");
 
         String newId = "unionFee_id_" + (syndicate.getUnionFeeList() == null || syndicate.getUnionFeeList().isEmpty() ? 0 : syndicate.getUnionFeeList().size());
@@ -427,7 +428,7 @@ public class Facade {
 
         String linkedSyndicateId = filteredEmployee.getLinkedSyndicateId();
 
-        if(linkedSyndicateId.isEmpty())
+        if(linkedSyndicateId == null)
             return "0,00";
 
         Syndicate syndicate = getSyndicateById(linkedSyndicateId);
