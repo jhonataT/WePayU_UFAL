@@ -11,6 +11,7 @@ public class Syndicate {
     public Syndicate(String id) {
         this.id = id;
         this.employeeList = new ArrayList<>();
+        this.unionFeeList = new ArrayList<>();
     }
 
     public void addNewEmployee(UnionizedEmployee newEmployee) {

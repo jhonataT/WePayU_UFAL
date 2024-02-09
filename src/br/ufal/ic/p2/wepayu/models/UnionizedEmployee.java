@@ -12,12 +12,20 @@ public class UnionizedEmployee extends Employee {
         double remuneration,
         List<Sale> sales,
         String unionizedId,
-        double unionFee
+        double unionFee,
+        boolean unionized
     ) {
-        super(employeeId, name, type, remuneration, sales);
+        super(employeeId, name, type, remuneration, sales, unionized);
 
         this.unionizedId = unionizedId;
         this.unionFee = unionFee;
     }
 
+    public String getUnionizedId() {
+        return this.unionizedId;
+    }
+
+    public double getValue() {
+        return this.unionFee;
+    }
 }

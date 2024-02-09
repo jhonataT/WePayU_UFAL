@@ -2,39 +2,70 @@ package br.ufal.ic.p2.wepayu;
 
 import br.ufal.ic.p2.wepayu.models.*;
 import br.ufal.ic.p2.wepayu.utils.DateFormat;
-import br.ufal.ic.p2.wepayu.utils.XMLManager;
+import br.ufal.ic.p2.wepayu.utils.XMLEmployeeManager;
+import br.ufal.ic.p2.wepayu.utils.XMLSyndicateManager;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class Facade {
-    private List<Employee> employees;
-    private List<Syndicate> syndicates;
-    private XMLManager xmlDatabase;
-    private XMLManager xmlSalesDatabase;
-    private String[] typeOptions = { "horista", "assalariado", "comissionado" };
-    private String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao", "hours", "sales" };
+    private Map<String, Employee> employees;
+    private Map<String, Syndicate> syndicates;
+    private final XMLEmployeeManager xmlDatabase;
+    private final XMLSyndicateManager xmlSyndicateDb;
+    private final String[] typeOptions = { "horista", "assalariado", "comissionado" };
+    private final String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao", "hours", "sales" };
 
     public Facade() throws Exception {
-        this.xmlDatabase = new XMLManager("employees");
+        this.xmlDatabase = new XMLEmployeeManager("employees");
+        this.xmlSyndicateDb = new XMLSyndicateManager("syndicates");
+
         this.employees = this.xmlDatabase.readAndGetEmployeeFile();
-        this.syndicates = new ArrayList<>();
+        this.syndicates = this.xmlSyndicateDb.readAndGetSyndicateFile(this.employees);
     }
 
     public void zerarSistema() throws Exception {
-        this.employees = new ArrayList<Employee>();
-
-        this.xmlDatabase.createAndSaveEmployeeDocument(this.employees);
+        this.employees = new HashMap<>();
+        this.syndicates = new HashMap<>();
     }
 
-    private List<Employee> getEmployeeById(String id) {
-        return this.employees.stream().filter(item -> item.getId().equals(id)).toList();
+    private Employee getEmployeeById(String id) throws Exception {
+        Employee employeeToReturn = this.employees.get(id);
+
+        if(employeeToReturn == null)
+            throw new Exception("Empregado nao existe.");
+
+        return employeeToReturn;
     }
 
-    private List<Syndicate> getSyndicateById(String id) {
-        return this.syndicates.stream().filter(item -> item.getId().equals(id)).toList();
+    private Employee getEmployeeBySyndicate(String syndicateId) {
+        for (Employee employee : this.employees.values()) {
+            if (employee.getLinkedSyndicateId().equals(syndicateId)) {
+                return employee;
+            }
+        }
+
+        return null;
+    }
+
+    private List<Employee> getEmployeesByName(String employeeName) {
+        List<Employee> employeesToReturn = new ArrayList<>();
+
+        for (Employee employee : this.employees.values()) {
+            if (employee.getName().equals(employeeName)) {
+                employeesToReturn.add(employee);
+            }
+        }
+
+        return employeesToReturn;
+    }
+
+    private Syndicate getSyndicateById(String syndicateId) {
+        return this.syndicates.get(syndicateId);
+    }
+
+    private void updateEmployeeList(Employee employeeToUpdate) {
+
     }
 
     private boolean isNumeric(String str) {
@@ -54,34 +85,28 @@ public class Facade {
         if(this.employees.isEmpty())
             throw new Exception("Empregado nao existe.");
 
-        List<Employee> filteredEmployees = this.getEmployeeById(employeeId);
+        Employee employee = this.getEmployeeById(employeeId);
 
-        if(!filteredEmployees.isEmpty()) {
-            Employee filteredEmployee = filteredEmployees.get(0);
-
-            if(property.equals("nome"))
-                return filteredEmployee.getName();
-            if(property.equals("id"))
-                return filteredEmployee.getId();
-            else if(property.equals("endereco"))
-                return filteredEmployee.getAddress();
-            else if(property.equals("tipo"))
-                return filteredEmployee.getType();
-            else if(property.equals("salario"))
-                return String.format("%.2f", filteredEmployee.getRemuneration()).replace('.', ',');
-            else if(property.equals("sindicalizado"))
-                return Boolean.toString(filteredEmployee.getUnionized());
-            else if(property.equals("comissao"))
-                return String.format("%.2f", filteredEmployee.getCommission()).replace('.', ',');
-        }
+        if(property.equals("nome"))
+            return employee.getName();
+        if(property.equals("id"))
+            return employee.getId();
+        else if(property.equals("endereco"))
+            return employee.getAddress();
+        else if(property.equals("tipo"))
+            return employee.getType();
+        else if(property.equals("salario"))
+            return String.format("%.2f", employee.getRemuneration()).replace('.', ',');
+        else if(property.equals("sindicalizado"))
+            return Boolean.toString(employee.getUnionized());
+        else if(property.equals("comissao"))
+            return String.format("%.2f", employee.getCommission()).replace('.', ',');
 
         throw new Exception("Empregado nao existe.");
     }
 
     public String getEmpregadoPorNome(String employeeName, int index) throws Exception {
-        List<Employee> filteredEmployees = this.employees.stream().filter(
-            item -> item.getName().equals(employeeName)
-        ).toList();
+        List<Employee> filteredEmployees = getEmployeesByName(employeeName);
 
         if(!filteredEmployees.isEmpty() && index >= 0) {
             Employee employeeToReturn = filteredEmployees.get(index - 1);
@@ -117,13 +142,12 @@ public class Facade {
         String newId = Integer.toString(this.employees.size() + 1);
         Employee employee = new Employee("id".concat(newId), name, address, type, newRemuneration, newCommission, false);
 
-        this.employees.add(employee);
-        saveEmployeeInDatabase();
+        this.employees.put(employee.getId(), employee);
 
         return employee.getId();
     }
 
-    private LocalDate verifyDate(String newDate, String type, boolean isStrict) throws Exception {
+    private LocalDate dateVerify(String newDate, String type, boolean isStrict) throws Exception {
         LocalDate date;
 
         try {
@@ -142,26 +166,20 @@ public class Facade {
     }
 
     public int getHorasNormaisTrabalhadas(String employeeId, String startDate, String finishDate) throws Exception {
-        LocalDate formattedStartDate = this.verifyDate(startDate, "start", false);
-        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", true);
+        LocalDate formattedStartDate = this.dateVerify(startDate, "start", false);
+        LocalDate formattedFinishDate = this.dateVerify(finishDate, "finish", true);
 
         if(formattedStartDate.isAfter(formattedFinishDate)) {
             throw new Exception("Data inicial nao pode ser posterior aa data final.");
         }
 
-        List<Employee> employeeList = getEmployeeById(employeeId);
+        Employee filtredEmployee = getEmployeeById(employeeId);
 
-        if(employeeList.isEmpty()) {
-            throw new Exception("Empregado nao existe.");
-        }
-
-        Employee employee = employeeList.get(0);
-
-        if(!employee.getType().equals("horista")) {
+        if(!filtredEmployee.getType().equals("horista")) {
             throw new Exception("Empregado nao eh horista.");
         }
 
-        List<Timestamp> employeeTimeStamp = employee.getTimestamp();
+        List<Timestamp> employeeTimeStamp = filtredEmployee.getTimestamp();
 
         if(employeeTimeStamp.isEmpty()) return 0;
 
@@ -183,17 +201,14 @@ public class Facade {
     }
 
     public String getHorasExtrasTrabalhadas(String employeeId, String startDate, String finishDate) throws Exception {
-        LocalDate formattedStartDate = this.verifyDate(startDate, "start", true);
-        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", true);
+        LocalDate formattedStartDate = this.dateVerify(startDate, "start", true);
+        LocalDate formattedFinishDate = this.dateVerify(finishDate, "finish", true);
 
-        List<Employee> employeeList = getEmployeeById(employeeId);
+        Employee filtredEmployee = getEmployeeById(employeeId);
 
-        if(employeeList.isEmpty())
-            throw new Exception("Empregado nao existe.");
 
-        Employee employee = employeeList.get(0);
 
-        List<Timestamp> employeeTimeStampList = employee.getTimestamp();
+        List<Timestamp> employeeTimeStampList = filtredEmployee.getTimestamp();
 
         if(employeeTimeStampList == null || employeeTimeStampList.isEmpty()) return "0";
 
@@ -221,21 +236,14 @@ public class Facade {
     public void lancaCartao(String employeeId, String date, String hours) throws Exception {
         if(employeeId.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
 
-        LocalDate formattedDate = this.verifyDate(date, "", true);
+        LocalDate formattedDate = this.dateVerify(date, "", true);
 
-        List<Employee> employeeList = getEmployeeById(employeeId);
+        Employee filtredEmployee = getEmployeeById(employeeId);
 
-        if(employeeList.isEmpty()) {
-            throw new Exception("Empregado nao existe.");
-        }
-
-        Employee employee = employeeList.get(0);
-
-        if(!employee.getType().equals("horista")) {
+        if(!filtredEmployee.getType().equals("horista"))
             throw new Exception("Empregado nao eh horista.");
-        }
 
-        List<Timestamp> timestamps = employee.getTimestamp();
+        List<Timestamp> timestamps = filtredEmployee.getTimestamp();
 
         String newId = employeeId+"_id_0";
 
@@ -251,11 +259,9 @@ public class Facade {
 
         Timestamp newTimestamp = new Timestamp(newId, formattedDate, formattedHours);
 
-        employee.setTimestamp(newTimestamp);
+        filtredEmployee.setTimestamp(newTimestamp);
 
-        this.removerEmpregado(employeeId);
-        this.employees.add(employee);
-        saveEmployeeInDatabase();
+        this.employees.put(employeeId, filtredEmployee);
     }
 
     public String criarEmpregado(String name, String address, String type, String remuneration) throws Exception {
@@ -267,21 +273,14 @@ public class Facade {
     public void lancaVenda(String employeeId, String date, String value) throws Exception {
         if(employeeId.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
 
-        LocalDate formattedDate = this.verifyDate(date, "", true);
+        LocalDate formattedDate = this.dateVerify(date, "", true);
 
-        List<Employee> employeeList = getEmployeeById(employeeId);
+        Employee filteredEmployee = getEmployeeById(employeeId);
 
-        if(employeeList.isEmpty()) {
-            throw new Exception("Empregado nao existe.");
-        }
-
-        Employee employee = employeeList.get(0);
-
-        if(!employee.getType().equals("comissionado")) {
+        if(!filteredEmployee.getType().equals("comissionado"))
             throw new Exception("Empregado nao eh comissionado.");
-        }
 
-        List<Sale> sales = employee.getSales();
+        List<Sale> sales = filteredEmployee.getSales();
 
         String newId = employeeId+"_saleId_0";
 
@@ -291,40 +290,30 @@ public class Facade {
 
         double formattedValue = Double.parseDouble(value.replace(",", "."));
 
-        if(formattedValue <= 0) {
+        if(formattedValue <= 0)
             throw new Exception("Valor deve ser positivo.");
-        }
 
         Sale newSale = new Sale(newId, formattedDate, formattedValue);
 
-        employee.setSale(newSale);
+        filteredEmployee.setSale(newSale);
 
-        this.removerEmpregado(employeeId);
-        this.employees.add(employee);
-        saveEmployeeInDatabase();
+        this.employees.put(employeeId, filteredEmployee);
     }
 
     public String getVendasRealizadas(String employeeId, String startDate, String finishDate) throws Exception {
-        LocalDate formattedStartDate = this.verifyDate(startDate, "start", true);
-        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", true);
+        LocalDate formattedStartDate = this.dateVerify(startDate, "start", true);
+        LocalDate formattedFinishDate = this.dateVerify(finishDate, "finish", true);
 
         if(formattedStartDate.isAfter(formattedFinishDate)) {
             throw new Exception("Data inicial nao pode ser posterior aa data final.");
         }
 
-        List<Employee> employeeList = getEmployeeById(employeeId);
+        Employee filteredEmployee = getEmployeeById(employeeId);
 
-        if(employeeList.isEmpty()) {
-            throw new Exception("Empregado nao existe.");
-        }
-
-        Employee employee = employeeList.get(0);
-
-        if(!employee.getType().equals("comissionado")) {
+        if(!filteredEmployee.getType().equals("comissionado"))
             throw new Exception("Empregado nao eh comissionado.");
-        }
 
-        List<Sale> employeeSales = employee.getSales();
+        List<Sale> employeeSales = filteredEmployee.getSales();
 
         if(employeeSales.isEmpty()) return "0,00";
 
@@ -346,35 +335,26 @@ public class Facade {
     public void alteraEmpregado(String employeeId, String property, String value, String syndicateId, String unionFee) throws Exception {
         if(employeeId.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
 
-        List<Employee> employeeList = getEmployeeById(employeeId);
-
-        if(employeeList.isEmpty()) {
-            throw new Exception("Empregado nao existe.");
-        }
-
-        Employee employee = employeeList.get(0);
+        Employee filteredEmployee = getEmployeeById(employeeId);
 
         if(property.equals("sindicalizado")) {
             boolean isUnionized = Boolean.parseBoolean(value);
 
-            employee.setUnionized(isUnionized);
+            filteredEmployee.setUnionized(isUnionized);
 
             if(isUnionized) {
-                double formattedunionFee = Double.parseDouble(unionFee.replace(',', '.'));
+                double formattedUnionFee = Double.parseDouble(unionFee.replace(',', '.'));
 
-                List<Syndicate> filteredSyndicates = getSyndicateById(syndicateId);
-                Syndicate syndicate;
+                Employee employeeWithSyndicate = getEmployeeBySyndicate(syndicateId);
 
-                System.out.println("BEFORE CREATE -> "+filteredSyndicates.size());
+                if(employeeWithSyndicate != null && !employeeWithSyndicate.getId().isEmpty())
+                    throw new Exception("Ha outro empregado com esta identificacao de sindicato");
 
-                if(filteredSyndicates.isEmpty()) {
-                    System.out.println("CREATE ");
-                    syndicate = new Syndicate(syndicateId);
-                } else {
-                    syndicate = filteredSyndicates.get(0);
-                }
+                Syndicate syndicate = getSyndicateById(syndicateId);
 
-                this.syndicates.add(syndicate);
+                if(syndicate.getId().isEmpty()) syndicate = new Syndicate(syndicateId);
+
+                this.syndicates.put(syndicateId, syndicate);
 
                 UnionizedEmployee syndicateEmployee = syndicate.getEmployeeById(employeeId);
 
@@ -383,66 +363,86 @@ public class Facade {
 
                     syndicateEmployee = new UnionizedEmployee(
                         employeeId,
-                        employee.getName(),
-                        employee.getType(),
-                        employee.getRemuneration(),
-                        employee.getSales(),
+                        filteredEmployee.getName(),
+                        filteredEmployee.getType(),
+                        filteredEmployee.getRemuneration(),
+                        filteredEmployee.getSales(),
                         "unionizedId_"+newId,
-                        formattedunionFee
+                            formattedUnionFee,
+                        true
                     );
 
                     syndicate.addNewEmployee(syndicateEmployee);
                 } else {
-                    syndicateEmployee.setUnionFee(formattedunionFee);
+                    syndicateEmployee.setUnionFee(formattedUnionFee);
                 }
 
-                employee.setLinkedSyndicate(syndicate);
-                employee.setUnionFee(formattedunionFee);
+                filteredEmployee.setLinkedSyndicate(syndicate.getId());
+                filteredEmployee.setUnionFee(formattedUnionFee);
 
-                employee.setUnionized(Boolean.parseBoolean(value));
+                this.employees.put(employeeId, filteredEmployee);
             }
         }
     }
 
     public void lancaTaxaServico(String syndicateId, String date, String value) throws Exception {
-        LocalDate formattedDate = this.verifyDate(date, "", true);
+        if(syndicateId.isEmpty())
+            throw new Exception("Identificacao do membro nao pode ser nula.");
+
+        LocalDate formattedDate = this.dateVerify(date, "", true);
         double formattedValue = Double.parseDouble(value.replace(",", "."));
 
         if(formattedValue <= 0)
             throw new Exception("Valor deve ser positivo.");
 
-        List<Syndicate> filteredSyndicates = getSyndicateById(syndicateId);
+        Syndicate syndicate = getSyndicateById(syndicateId);
 
-        if(filteredSyndicates.isEmpty())
+        if(syndicate.getId().isEmpty())
             throw new Exception("Membro nao existe.");
 
-        Syndicate syndicate = filteredSyndicates.get(0);
-
-        String newId = "unionFee_id_" + (syndicate.getUnionFeeList().isEmpty() ? 0 : syndicate.getUnionFeeList().size());
+        String newId = "unionFee_id_" + (syndicate.getUnionFeeList() == null || syndicate.getUnionFeeList().isEmpty() ? 0 : syndicate.getUnionFeeList().size());
 
         UnionFee newUnionFee = new UnionFee(newId, formattedDate, formattedValue);
         syndicate.addNewUnionFee(newUnionFee);
     }
 
     public String getTaxasServico(String employeeId, String startDate, String finishDate) throws Exception {
-        LocalDate formattedStartDate = this.verifyDate(startDate, "start", true);
-        LocalDate formattedFinishDate = this.verifyDate(finishDate, "finish", true);
+        if(employeeId.isEmpty())
+            throw new Exception("Identificacao do membro nao pode ser nula.");
 
-        List<Employee> filteredEmployees = getEmployeeById(employeeId);
+        LocalDate formattedStartDate = this.dateVerify(startDate, "start", true);
+        LocalDate formattedFinishDate = this.dateVerify(finishDate, "finish", true);
 
-        System.out.println("filteredEmployees SIZE -> "+filteredEmployees.size());
+        if(formattedStartDate.isAfter(formattedFinishDate)) {
+            throw new Exception("Data inicial nao pode ser posterior aa data final.");
+        }
 
-        if(filteredEmployees.isEmpty())
+        Employee filteredEmployee = getEmployeeById(employeeId);
+
+        if(filteredEmployee.getId().isEmpty())
             throw new Exception("Membro nao existe.");
 
-        // Create method to get Employees unionized;
-        Employee employee = filteredEmployees.get(0);
+        if(!filteredEmployee.getUnionized())
+            throw new Exception("Empregado nao eh sindicalizado.");
+
+        String linkedSyndicateId = filteredEmployee.getLinkedSyndicateId();
+
+        if(linkedSyndicateId.isEmpty())
+            return "0,00";
+
+        Syndicate syndicate = getSyndicateById(linkedSyndicateId);
+
+        if(syndicate.getId().isEmpty())
+            throw new Exception("Membro nao existe.");
 
         double totalValue = 0;
 
-        // List<UnionFee> unionFeeList = employee.getUnionFeeList();
+        List<UnionFee> unionFeeList = syndicate.getUnionFeeList();
 
-        /*for (UnionFee unionFee : unionFeeList) {
+        if(unionFeeList.isEmpty())
+            return "0,00";
+
+        for (UnionFee unionFee : unionFeeList) {
             LocalDate date = unionFee.getDate();
 
             if(date.isAfter(formattedStartDate) || date.isEqual(formattedStartDate)) {
@@ -450,7 +450,7 @@ public class Facade {
                     totalValue += unionFee.getValue();
                 }
             }
-        }*/
+        }
 
         return String.format("%.2f", totalValue).replace('.', ',');
     }
@@ -462,16 +462,24 @@ public class Facade {
     public void removerEmpregado(String employeeId) throws Exception {
         if(employeeId.isEmpty()) throw new Exception("Identificacao do empregado nao pode ser nula.");
 
-        List<Employee> employeeToRemove = this.employees.stream().filter(item -> item.getId().equals(employeeId)).toList();
+        Employee employeeToRemove = getEmployeeById(employeeId);
 
-        if(employeeToRemove.isEmpty()) throw new Exception("Empregado nao existe.");
-
-        this.employees = this.employees.stream().filter(item -> !item.getId().equals(employeeId)).toList();
-
-        saveEmployeeInDatabase();
+        this.employees.remove(employeeId);
     }
 
-    public boolean saveEmployeeInDatabase() throws Exception {
+    private boolean saveSyndicateInDatabase() throws Exception {
+        try {
+            this.xmlSyndicateDb.createAndSaveSyndicateDocument(this.syndicates);
+            this.syndicates = this.xmlSyndicateDb.readAndGetSyndicateFile(this.employees);
+        } catch(Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean saveEmployeeInDatabase() throws Exception {
         try {
             this.xmlDatabase.createAndSaveEmployeeDocument(this.employees);
             this.employees = this.xmlDatabase.readAndGetEmployeeFile();
@@ -483,5 +491,10 @@ public class Facade {
         return true;
     }
 
-    public void encerrarSistema() {}
+    public void encerrarSistema() throws Exception {
+        this.saveSyndicateInDatabase();
+        this.saveEmployeeInDatabase();
+
+        // Salvar XML apenas aqui
+    }
 }

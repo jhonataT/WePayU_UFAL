@@ -5,7 +5,6 @@ import java.util.List;
 
 public class Employee {
     private final String id;
-
     private String name;
     private String address;
     private String type;
@@ -14,8 +13,7 @@ public class Employee {
     private boolean unionized;
     private List<Sale> saleList;
     private List<Timestamp> timestamp;
-
-    private Syndicate linkedSyndicate;
+    private String linkedSyndicateId;
     private double unionFee;
 
     public Employee(String id, String name, String address, String type, double remuneration, double commission, boolean unionized) {
@@ -30,12 +28,13 @@ public class Employee {
         this.timestamp = new ArrayList<>();
     }
 
-    public Employee(String id, String name, String type, double remuneration, List<Sale> sales) {
+    public Employee(String id, String name, String type, double remuneration, List<Sale> sales, boolean unionized) {
         this.id = id;
         this.name = name;
         this.type = type;
         this.remuneration = remuneration;
         this.saleList = sales;
+        this.unionized = unionized;
     }
 
     public String getName() {
@@ -54,11 +53,11 @@ public class Employee {
         this.unionized = newValue;
     }
 
-    public void setLinkedSyndicate(Syndicate newSyndicate) {
-        this.linkedSyndicate = newSyndicate;
+    public void setLinkedSyndicate(String newSyndicateId) {
+        this.linkedSyndicateId = newSyndicateId;
     }
 
-    public Syndicate getLinkedSyndicate() { return this.linkedSyndicate; }
+    public String getLinkedSyndicateId() { return this.linkedSyndicateId; }
 
     public void setUnionFee(double newUnionFee) {
         this.unionFee = newUnionFee;

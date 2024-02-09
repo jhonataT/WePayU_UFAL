@@ -16,12 +16,14 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class XMLManager {
+public class XMLEmployeeManager {
     private String fileName;
     private File file;
-    public XMLManager(String fileName) throws Exception {
+    public XMLEmployeeManager(String fileName) throws Exception {
         try {
             this.fileName = "src/br/ufal/ic/p2/wepayu/database/"+fileName+".xml";
             this.file = new File(this.fileName);
@@ -34,8 +36,16 @@ public class XMLManager {
         }
     }
 
-    public List<Employee> readAndGetEmployeeFile() throws Exception, ParserConfigurationException, IOException, SAXException {
-        List<Employee> newEmployeeListToReturn = new ArrayList<Employee>();
+    public String getFileName() {
+        return this.fileName;
+    }
+
+    public File getFile() {
+        return this.file;
+    }
+
+    public Map<String, Employee> readAndGetEmployeeFile() {
+        Map<String, Employee> newEmployeeListToReturn = new HashMap<>();
 
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -64,6 +74,7 @@ public class XMLManager {
                     String remuneration = employeeElement.getElementsByTagName("remuneration").item(0).getTextContent();
                     String commission = employeeElement.getElementsByTagName("commission").item(0).getTextContent();
                     String unionized = employeeElement.getElementsByTagName("unionized").item(0).getTextContent();
+                    String syndicateId = employeeElement.getElementsByTagName("syndicateId").item(0).getTextContent();
 
                     Employee newEmployee = new Employee(
                         id,
@@ -74,6 +85,8 @@ public class XMLManager {
                         Double.parseDouble(commission),
                         Boolean.parseBoolean(unionized)
                     );
+
+                    newEmployee.setLinkedSyndicate(syndicateId);
 
                     for (int j = 0; j < timestamps.getLength(); j++) {
                         Node timestampNode = timestamps.item(j);
@@ -115,7 +128,7 @@ public class XMLManager {
                         }
                     }
 
-                    newEmployeeListToReturn.add(newEmployee);
+                    newEmployeeListToReturn.put(newEmployee.getId(), newEmployee);
                 }
             }
         } catch (Exception e) {
@@ -125,8 +138,7 @@ public class XMLManager {
         return newEmployeeListToReturn;
     }
 
-
-    public void createAndSaveEmployeeDocument(List<Employee> newEmployeeList) throws Exception {
+    public void createAndSaveEmployeeDocument(Map<String, Employee> newEmployeeList) throws Exception {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = dbf.newDocumentBuilder();
 
@@ -135,8 +147,9 @@ public class XMLManager {
         Element rootElement = document.createElement("Employees");
         document.appendChild(rootElement);
 
-        for (Employee newEmployee : newEmployeeList) {
+        for(Employee newEmployee : newEmployeeList.values()) {
             List<Timestamp> timestamps = newEmployee.getTimestamp();
+            String linkedSyndicate = newEmployee.getLinkedSyndicateId();
             List<Sale> sales = newEmployee.getSales();
 
             Element childElement = document.createElement("employee");
@@ -157,10 +170,15 @@ public class XMLManager {
             childComissionElement.appendChild(document.createTextNode(Double.toString(newEmployee.getCommission())));
 
             Element childUnionizedElement = document.createElement("unionized");
-            childUnionizedElement.appendChild(document.createTextNode(Double.toString(newEmployee.getCommission())));
+            childUnionizedElement.appendChild(document.createTextNode(Boolean.toString(newEmployee.getUnionized())));
 
             Element childTimestampsElement = document.createElement("timestamps");
             Element childSalesElement = document.createElement("sales");
+
+            Element childSyndicatesElement = document.createElement("syndicates");
+
+            Element childSyndicateElement = document.createElement("syndicateId");
+            childSyndicateElement.appendChild(document.createTextNode(linkedSyndicate));
 
             for(Timestamp timestamp : timestamps) {
                 Element childTimestampElement = document.createElement("timestamp");
@@ -211,6 +229,8 @@ public class XMLManager {
             childElement.appendChild(childRemunerationElement);
             childElement.appendChild(childComissionElement);
             childElement.appendChild(childUnionizedElement);
+            childElement.appendChild(childSyndicatesElement);
+            childSyndicatesElement.appendChild(childSyndicateElement);
         }
 
         TransformerFactory tf = TransformerFactory.newInstance();
