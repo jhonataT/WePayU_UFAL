@@ -1,9 +1,11 @@
 package br.ufal.ic.p2.wepayu.utils;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.ResolverStyle;
+import java.time.temporal.ChronoUnit;
 
 public class DateFormat {
 
@@ -29,4 +31,23 @@ public class DateFormat {
     public static LocalDate stringToDate(String newDate, boolean isStrict) {
         return LocalDate.parse(newDate, getFormatter(isStrict));
     }
+
+    public static boolean isLastWorkingDayOfMonth(LocalDate date) {
+        int lastDayOfMonth = date.lengthOfMonth();
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+
+        return date.getDayOfMonth() == lastDayOfMonth && dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY;
+    }
+
+    public static boolean isFriday(LocalDate date) {
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+
+        return dayOfWeek == DayOfWeek.FRIDAY;
+    }
+
+    public static long getDifferenceInDays(LocalDate date, LocalDate dateToCompare) {
+        return ChronoUnit.DAYS.between(date, dateToCompare);
+    }
+
+
 }

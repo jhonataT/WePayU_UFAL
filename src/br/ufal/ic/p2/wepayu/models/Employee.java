@@ -1,5 +1,8 @@
 package br.ufal.ic.p2.wepayu.models;
 
+import br.ufal.ic.p2.wepayu.utils.DateFormat;
+
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +20,7 @@ public class Employee {
     private double unionFee;
     private String formOfPayment;
     private EmployeeBank bankInfo;
+    private LocalDate lastPayment;
 
     public Employee(String id, String name, String address, String type, double remuneration, double commission, boolean unionized) {
         this.id = id;
@@ -30,6 +34,7 @@ public class Employee {
         this.timestamp = new ArrayList<>();
         this.formOfPayment = "emMaos";
         this.bankInfo = new EmployeeBank();
+        this.lastPayment = DateFormat.stringToDate("1/1/2005", false);
     }
 
     public Employee(String id, String name, String type, double remuneration, List<Sale> sales, boolean unionized) {
@@ -91,6 +96,14 @@ public class Employee {
 
     public double getRemuneration() {
         return this.remuneration;
+    }
+
+    public LocalDate getLastPayment() {
+        return this.lastPayment;
+    }
+
+    public void setLastPaymentDate(LocalDate newLastPayment) {
+        this.lastPayment = newLastPayment;
     }
 
     public void setCommission(double newCommission) {

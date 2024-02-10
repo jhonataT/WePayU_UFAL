@@ -57,9 +57,6 @@ public class XMLSyndicateManager extends XMLEmployeeManager implements Interface
 
                     Syndicate newSyndicate = new Syndicate(syndicateId);
 
-                    System.out.println("AFTER unionizedEmployees size -> " + unionizedEmployees.getLength());
-                    System.out.println("AFTER unionFees size -> " + unionFees.getLength());
-
                     for (int j = 0; j < unionizedEmployees.getLength(); j++) {
                         Node unionizedEmployeeNode = unionizedEmployees.item(j);
 
@@ -131,9 +128,6 @@ public class XMLSyndicateManager extends XMLEmployeeManager implements Interface
         for (Syndicate newSyndicate : newSyndicates.values()) {
             List<UnionizedEmployee> unionizedEmployees = newSyndicate.getEmployees();
             List<UnionFee> unionFeeList = newSyndicate.getUnionFeeList();
-
-            System.out.println("unionizedEmployees size -> " + unionizedEmployees.size());
-            System.out.println("unionFees size -> " + unionFeeList.size());
 
             Element childElement = document.createElement("syndicate");
             Element childUnEmployeesElement = document.createElement("unionizedEmployees");
