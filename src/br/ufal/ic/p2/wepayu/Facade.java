@@ -15,9 +15,9 @@ import java.time.LocalDate;
 import java.util.*;
 
 public class Facade {
-    private final Map<String, TxtFileManager> payrollList;
     private final XMLEmployeeManager xmlDatabase;
     private final XMLSyndicateManager xmlSyndicateDb;
+    private Map<LocalDate, Map<Employee, PayrollEmployeeResponse>> lastLocalPayroll;
 
     public Facade() throws Exception {
         this.xmlDatabase = new XMLEmployeeManager("employees");
@@ -26,7 +26,7 @@ public class Facade {
         EmployeeController.initializeEmployees(this.xmlDatabase);
         SyndicateController.initializeSyndicates(this.xmlSyndicateDb);
 
-        this.payrollList = new HashMap<>();
+        this.lastLocalPayroll = new HashMap<>();
     }
 
     public void zerarSistema() throws Exception {
@@ -177,65 +177,15 @@ public class Facade {
     }
 
     public String totalFolha(String date) throws Exception {
-        LocalDate formattedFinishDate = this.dateVerify(date, "", true);
-
-        double totalPayment = 0;
-
-        for(Employee employee : EmployeeController.getEmployees().values()) {
-            boolean isUnionized = employee.getUnionized();
-            double discount = 0;
-
-            if(isUnionized) {
-                discount += (employee.getUnionFee() * (employee.getType().equals("horista") ? 7 : employee.getType().equals("comissionado") ? 15 : 30));
-                String syndicateId = employee.getLinkedSyndicateId();
-
-                Syndicate syndicate = SyndicateController.getSyndicateById(syndicateId);
-
-                UnionizedEmployee unionizedEmployee = syndicate.getEmployeeById(employee.getId());
-                discount += (unionizedEmployee.getValue()  * (employee.getType().equals("horista") ? 7 : employee.getType().equals("comissionado") ? 15 : 30));
-            }
-
-            PayrollEmployeeResponse payrollEmployeeResponse = null;
-
-            if(employee.getType().equals("horista") && DateFormat.isFriday(formattedFinishDate)) {
-                payrollEmployeeResponse = PayrollController.getHourlyPayrollDetails(employee, formattedFinishDate, discount);
-            } else if(employee.getType().equals("comissionado") && DateFormat.isFriday(formattedFinishDate)) {
-                payrollEmployeeResponse = PayrollController.getCommissionedPayrollDetails(employee, formattedFinishDate, discount);
-            } else if(employee.getType().equals("assalariado") && DateFormat.isLastWorkingDayOfMonth(formattedFinishDate)) {
-                payrollEmployeeResponse = PayrollController.getSalariedPayrollDetails(employee, formattedFinishDate, discount);
-            }
-
-            if(payrollEmployeeResponse != null) {
-                totalPayment += payrollEmployeeResponse.getRemuneration() - payrollEmployeeResponse.getDiscounts();
-            }
-        }
-
-        return String.format("%.2f", totalPayment).replace('.', ',');
+        return PayrollController.runPayrollAndGetTotal(this.dateVerify(date, "", true), this.lastLocalPayroll);
     }
 
     public void rodaFolha(String date, String output) throws IOException, Exception {
-        String totalPayment = totalFolha(date);
-
-        TxtFileManager newTxt = new TxtFileManager(output);
-        newTxt.addingContent(totalPayment);
-
-        this.payrollList.put(output, newTxt);
+        PayrollController.savePayrollFile(this.dateVerify(date, "", true), output, this.lastLocalPayroll);
     }
 
     public void equalFiles(String file1, String file2) throws IOException {
-        System.out.println("\n\nfile1 -> " + file1);
-        System.out.println("file2 -> " + file2 + "\n\n");
 
-        TxtFileManager filteredFile = this.payrollList.get(file2);
-
-        System.out.println("\n\nARQUIVO ENCONTRADO -> " + filteredFile);
-
-        if(filteredFile != null) {
-            String validatedPayroll = TxtFileManager.getContent(file1);
-            String newPayroll = filteredFile.getContent();
-
-            System.out.println("\n\nvalidatedPayroll == newPayroll -> " + validatedPayroll == newPayroll);
-        }
     }
 
     public void encerrarSistema() throws Exception {

@@ -40,5 +40,9 @@ public class Syndicate {
         return filteredEmployees.get(0);
     }
 
+    public List<UnionizedEmployee> getEmployeesById(String employeeId) {
+        return this.employeeList.stream().filter(item -> item.getId().equals(employeeId)).toList();
+    }
+
     public String getId() { return this.id; }
 }

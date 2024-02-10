@@ -120,6 +120,16 @@ public class EmployeeController {
         return NumberFormat.doubleToCommaFormat(employee.getCommission());
     }
 
+    public static String formatPaymentMethod(Employee employee) {
+        if(employee.getFormOfPayment().equals("banco")) {
+            return employee.getEmployeeBank().getBankName()+", "+"Ag. "+employee.getEmployeeBank().getBankBranch()+" CC "+employee.getEmployeeBank().getCurrentAccount();
+        } else if(employee.getFormOfPayment().equals("emMaos")) {
+            return "Em maos";
+        } else {
+            return "Correios, "+employee.getAddress();
+        }
+    }
+
     public static String getEmployeeProperty(String employeeId, String property) throws NoSuchFieldException, ClassNotFoundException {
         Employee employee = getEmployeeById(employeeId);
 

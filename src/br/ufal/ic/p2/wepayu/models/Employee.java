@@ -35,6 +35,7 @@ public class Employee {
         this.formOfPayment = "emMaos";
         this.bankInfo = new EmployeeBank();
         this.lastPayment = DateFormat.stringToDate("1/1/2005", false);
+        this.unionFee = 0;
     }
 
     public Employee(String id, String name, String type, double remuneration, List<Sale> sales, boolean unionized) {
