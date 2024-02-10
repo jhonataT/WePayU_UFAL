@@ -12,7 +12,15 @@ import java.util.List;
 import java.util.Map;
 
 public class PayrollController {
-    public static PayrollEmployeeResponse getCommissionedPayrollDetails(Employee employee, LocalDate date, double discounts) {
+    private static final PayrollController instance = new PayrollController();
+
+    private PayrollController() {}
+
+    public static PayrollController getInstance() {
+        return instance;
+    }
+
+    private static PayrollEmployeeResponse getCommissionedPayrollDetails(Employee employee, LocalDate date, double discounts, EmployeeController employeeController) {
         LocalDate lastPaymentDate = employee.getLastPayment();
 
         double totalPayment = 0;
@@ -45,9 +53,9 @@ public class PayrollController {
         totalPayment += (currentValue);
 
         employee.setLastPaymentDate(date);
-        EmployeeController.updateEmployeeList(employee);
+        employeeController.updateEmployeeList(employee);
 
-        String paymentMethod = EmployeeController.formatPaymentMethod(employee);
+        String paymentMethod = employeeController.formatPaymentMethod(employee);
 
         return new PayrollEmployeeResponse(
             employee,
@@ -62,7 +70,7 @@ public class PayrollController {
         );
     }
 
-    public static PayrollEmployeeResponse getSalariedPayrollDetails(Employee employee, LocalDate date, double discounts) {
+    public static PayrollEmployeeResponse getSalariedPayrollDetails(Employee employee, LocalDate date, double discounts, EmployeeController employeeController) {
         LocalDate lastPaymentDate = employee.getLastPayment();
 
         double totalPayment = 0;
@@ -71,10 +79,10 @@ public class PayrollController {
             totalPayment += employee.getRemuneration();
 
             employee.setLastPaymentDate(date);
-            EmployeeController.updateEmployeeList(employee);
+            employeeController.updateEmployeeList(employee);
         }
 
-        String paymentMethod = EmployeeController.formatPaymentMethod(employee);
+        String paymentMethod = employeeController.formatPaymentMethod(employee);
 
         return new PayrollEmployeeResponse(
             employee,
@@ -91,7 +99,7 @@ public class PayrollController {
 
 
 
-    public static PayrollEmployeeResponse getHourlyPayrollDetails(Employee employee, LocalDate date, double discounts) {
+    public static PayrollEmployeeResponse getHourlyPayrollDetails(Employee employee, LocalDate date, double discounts, EmployeeController employeeController) {
         System.out.println("\n\nEMPLOYEE NAME -> " + employee.getName());
         System.out.println("CURRENT DATE -> " + date);
         System.out.println("LAST PAYMENT DATE -> " + employee.getLastPayment());
@@ -132,10 +140,10 @@ public class PayrollController {
             totalPayment += (currentValue);
 
             employee.setLastPaymentDate(date);
-            EmployeeController.updateEmployeeList(employee);
+            employeeController.updateEmployeeList(employee);
         }
 
-        String paymentMethod = EmployeeController.formatPaymentMethod(employee);
+        String paymentMethod = employeeController.formatPaymentMethod(employee);
 
         return new PayrollEmployeeResponse(
             employee,
@@ -150,11 +158,10 @@ public class PayrollController {
         );
     }
 
-    public static String runPayrollAndGetTotal(LocalDate date, Map<LocalDate, Map<Employee, PayrollEmployeeResponse>> lastLocalPayroll) throws NoSuchFieldException, ClassNotFoundException {
+    public String runPayrollAndGetTotal(LocalDate date, Map<LocalDate, Map<Employee, PayrollEmployeeResponse>> lastLocalPayroll, EmployeeController employeeController, SyndicateController syndicateController) throws NoSuchFieldException, ClassNotFoundException {
         double totalPayment = 0;
 
-        for(Employee employee : EmployeeController.getEmployees().values()) {
-
+        for(Employee employee : employeeController.getEmployees().values()) {
             boolean isUnionized = employee.getUnionized();
             double discount = 0;
 
@@ -163,7 +170,7 @@ public class PayrollController {
 
                 String syndicateId = employee.getLinkedSyndicateId();
 
-                Syndicate syndicate = SyndicateController.getSyndicateById(syndicateId);
+                Syndicate syndicate = syndicateController.getSyndicateById(syndicateId);
 
                 List<UnionizedEmployee> unionizedEmployees = syndicate.getEmployeesById(employee.getId());
 
@@ -176,11 +183,11 @@ public class PayrollController {
             LocalDate lastPaymentDate = employee.getLastPayment();
 
             if(employee.getType().equals("horista") && DateFormat.isFriday(date)) {
-                payrollEmployeeResponse = PayrollController.getHourlyPayrollDetails(employee, date, discount);
+                payrollEmployeeResponse = PayrollController.getHourlyPayrollDetails(employee, date, discount, employeeController);
             } else if(employee.getType().equals("comissionado") && DateFormat.isFriday(date) && DateFormat.getDifferenceInDays(date, lastPaymentDate) >= 15) {
-                payrollEmployeeResponse = PayrollController.getCommissionedPayrollDetails(employee, date, discount);
+                payrollEmployeeResponse = PayrollController.getCommissionedPayrollDetails(employee, date, discount, employeeController);
             } else if(employee.getType().equals("assalariado") && DateFormat.isLastWorkingDayOfMonth(date)) {
-                payrollEmployeeResponse = PayrollController.getSalariedPayrollDetails(employee, date, discount);
+                payrollEmployeeResponse = PayrollController.getSalariedPayrollDetails(employee, date, discount, employeeController);
             }
 
             if(payrollEmployeeResponse != null) {
@@ -204,8 +211,8 @@ public class PayrollController {
         return NumberFormat.doubleToCommaFormat(totalPayment);
     }
 
-    public static void savePayrollFile(LocalDate date, String fileName, Map<LocalDate, Map<Employee, PayrollEmployeeResponse>> lastLocalPayroll) throws NoSuchFieldException, ClassNotFoundException, IOException {
-        runPayrollAndGetTotal(date, lastLocalPayroll);
+    public void savePayrollFile(LocalDate date, String fileName, Map<LocalDate, Map<Employee, PayrollEmployeeResponse>> lastLocalPayroll, EmployeeController employeeController, SyndicateController syndicateController) throws NoSuchFieldException, ClassNotFoundException, IOException {
+        runPayrollAndGetTotal(date, lastLocalPayroll, employeeController, syndicateController);
 
         TxtFileManager newTxt = new TxtFileManager(fileName);
         newTxt.addingPayrollContent(date, lastLocalPayroll.get(date));

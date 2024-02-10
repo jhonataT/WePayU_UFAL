@@ -8,10 +8,19 @@ import br.ufal.ic.p2.wepayu.utils.NumberFormat;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public class SaleController {
+    private static Map<String, Employee> employees;
+    private static final SaleController instance = new SaleController();
 
-    public static void saleLauncher(Employee employee, LocalDate date, double value) {
+    private SaleController() {}
+
+    public static SaleController getInstance() {
+        return instance;
+    }
+
+    public void saleLauncher(Employee employee, LocalDate date, double value, EmployeeController employeeController) {
         if(!employee.getType().equals("comissionado"))
             EmployeeException.nonCommissioned();
 
@@ -30,10 +39,10 @@ public class SaleController {
 
         employee.setSale(newSale);
 
-        EmployeeController.updateEmployeeList(employee);
+        employeeController.updateEmployeeList(employee);
     }
 
-    public static String getSalesMade(Employee employee, LocalDate startDate, LocalDate finishDate) {
+    public String getSalesMade(Employee employee, LocalDate startDate, LocalDate finishDate) {
         if(startDate.isAfter(finishDate)) DateException.invalidDateOrder();
 
         if(!employee.getType().equals("comissionado"))

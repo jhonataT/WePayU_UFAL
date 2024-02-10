@@ -15,15 +15,23 @@ public class EmployeeController {
     private static final String[] formOfPaymentOptions = { "banco", "correios", "emMaos" };
     private static final String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao", "hours", "sales", "banco" };
     private static Map<String, Employee> employees;
-    public static void initializeEmployees(XMLEmployeeManager database) {
+    private static final EmployeeController instance = new EmployeeController();
+
+    private EmployeeController() {}
+
+    public static EmployeeController getInstance() {
+        return instance;
+    }
+
+    public void initializeEmployees(XMLEmployeeManager database) {
         employees = database.readAndGetEmployeeFile();
     }
 
-    public static void resetEmployees() { employees = new HashMap<>(); }
+    public void resetEmployees() { employees = new HashMap<>(); }
 
-    public static Map<String, Employee> getEmployees() { return employees; }
+    public Map<String, Employee> getEmployees() { return employees; }
 
-    public static Employee getEmployeeById(String employeeId) throws ClassNotFoundException, NoSuchFieldException {
+    public Employee getEmployeeById(String employeeId) throws ClassNotFoundException, NoSuchFieldException {
         if(employeeId.isEmpty()) EmployeeException.employeeIdNotExists();
 
         Employee employeeToReturn = employees.get(employeeId);
@@ -34,11 +42,11 @@ public class EmployeeController {
         return employeeToReturn;
     }
 
-    public static void updateEmployeeList(Employee employee) {
+    public void updateEmployeeList(Employee employee) {
         employees.put(employee.getId(), employee);
     }
 
-    public static String getEmployeesByName(String employeeName, int index) throws ClassNotFoundException {
+    public String getEmployeesByName(String employeeName, int index) throws ClassNotFoundException {
         List<Employee> employeesToReturn = new ArrayList<>();
 
         for (Employee employee : employees.values()) {
@@ -76,7 +84,7 @@ public class EmployeeController {
         if(newRemuneration < 0) EmployeeException.negativeEmployeeRemuneration();
     }
 
-    public static String createEmployee(String name, String address, String type, String remuneration, String commission) throws NoSuchFieldException, ClassCastException, IllegalArgumentException {
+    public String createEmployee(String name, String address, String type, String remuneration, String commission) throws NoSuchFieldException, ClassCastException, IllegalArgumentException {
         validateEmployeeArguments(name, address, type, remuneration, commission);
 
         double newRemuneration = NumberFormat.stringToDouble(remuneration);
@@ -89,7 +97,7 @@ public class EmployeeController {
         return employee.getId();
     }
 
-    public static void removeEmployee(Employee employee) {
+    public void removeEmployee(Employee employee) {
         employees.remove(employee.getId());
     }
 
@@ -103,11 +111,11 @@ public class EmployeeController {
         else return bankInfo.getCurrentAccount();
     }
 
-    private static String getEmployeeSyndicateInfo(Employee employee, String property) throws IllegalArgumentException, NoSuchFieldException, ClassNotFoundException {
+    private static String getEmployeeSyndicateInfo(Employee employee, String property, SyndicateController syndicateController) throws IllegalArgumentException, NoSuchFieldException, ClassNotFoundException {
         String employeeSyndicateId = employee.getLinkedSyndicateId();
         if(!employee.getUnionized()) EmployeeException.employeeIsNotUnionized();
 
-        Syndicate syndicate = SyndicateController.getSyndicateById(employeeSyndicateId);
+        Syndicate syndicate = syndicateController.getSyndicateById(employeeSyndicateId);
 
         String value = NumberFormat.doubleToCommaFormat(syndicate.getEmployeeById(employee.getId()).getValue());
 
@@ -120,7 +128,7 @@ public class EmployeeController {
         return NumberFormat.doubleToCommaFormat(employee.getCommission());
     }
 
-    public static String formatPaymentMethod(Employee employee) {
+    public String formatPaymentMethod(Employee employee) {
         if(employee.getFormOfPayment().equals("banco")) {
             return employee.getEmployeeBank().getBankName()+", "+"Ag. "+employee.getEmployeeBank().getBankBranch()+" CC "+employee.getEmployeeBank().getCurrentAccount();
         } else if(employee.getFormOfPayment().equals("emMaos")) {
@@ -130,8 +138,8 @@ public class EmployeeController {
         }
     }
 
-    public static String getEmployeeProperty(String employeeId, String property) throws NoSuchFieldException, ClassNotFoundException {
-        Employee employee = getEmployeeById(employeeId);
+    public String getEmployeeProperty(String employeeId, String property, SyndicateController syndicateController) throws NoSuchFieldException, ClassNotFoundException {
+        Employee employee = this.getEmployeeById(employeeId);
 
         if(property.equals("nome")) return employee.getName();
         else if(property.equals("id")) return employee.getId();
@@ -141,7 +149,7 @@ public class EmployeeController {
         else if(property.equals("sindicalizado")) return Boolean.toString(employee.getUnionized());
         else if (property.equals("metodoPagamento")) return employee.getFormOfPayment();
         else if(property.equals("banco") || property.equals("agencia") || property.equals("contaCorrente")) return getEmployeeBankInfo(employee, property);
-        else if(property.equals("idSindicato") || property.equals("taxaSindical")) return getEmployeeSyndicateInfo(employee, property);
+        else if(property.equals("idSindicato") || property.equals("taxaSindical")) return getEmployeeSyndicateInfo(employee, property, syndicateController);
         else if(property.equals("comissao")) return getEmployeeCommission(employee);
         else EmployeeException.propertyNotExists();
 
@@ -159,7 +167,7 @@ public class EmployeeController {
         return null;
     }
 
-    public static int getWorkedHours(Employee employee, LocalDate startDate, LocalDate finalDate) throws ClassNotFoundException {
+    public int getWorkedHours(Employee employee, LocalDate startDate, LocalDate finalDate) throws ClassNotFoundException {
         if(startDate.isAfter(finalDate)) DateException.invalidDateOrder();
 
         if(!employee.getType().equals("horista")) EmployeeException.nonHourly();
@@ -185,7 +193,7 @@ public class EmployeeController {
         return totalHours;
     }
 
-    public static String getWorkedOvertime(Employee employee, LocalDate startDate, LocalDate finalDate) throws ClassNotFoundException {
+    public String getWorkedOvertime(Employee employee, LocalDate startDate, LocalDate finalDate) throws ClassNotFoundException {
         List<Timestamp> employeeTimeStampList = employee.getTimestamp();
 
         if(employeeTimeStampList == null || employeeTimeStampList.isEmpty()) return "0";
@@ -210,7 +218,7 @@ public class EmployeeController {
             : "0";
     }
 
-    public static void toLaunchTheCard(Employee employee, LocalDate date, double hours) throws NoSuchFieldException, ClassNotFoundException {
+    public void toLaunchTheCard(Employee employee, LocalDate date, double hours) throws NoSuchFieldException, ClassNotFoundException {
         if(hours <= 0) EmployeeException.negativeEmployeeHours();
 
         if(!employee.getType().equals("horista")) EmployeeException.nonHourly();
@@ -230,7 +238,7 @@ public class EmployeeController {
         updateEmployeeList(employee);
     }
 
-    public static void updateEmployeeByType(Employee employee, String property, String value, double commission) throws NoSuchFieldException {
+    public void updateEmployeeByType(Employee employee, String property, String value, double commission) throws NoSuchFieldException {
         if(property.equals("tipo")) {
             employee.setType(value);
 
@@ -242,7 +250,7 @@ public class EmployeeController {
         }
     }
 
-    public static void updateEmployeeBankInfo(Employee employee, String property, String value, String bankName, String bankBranch, String currentAccount) throws NoSuchFieldException {
+    public void updateEmployeeBankInfo(Employee employee, String property, String value, String bankName, String bankBranch, String currentAccount) throws NoSuchFieldException {
         if(property.equals("metodoPagamento") && value.equals("banco")) {
             if(bankName == null || bankName.isEmpty()) EmployeeException.isBankNameEmpty();
             if(bankBranch == null || bankBranch.isEmpty()) EmployeeException.isBankBranchEmpty();
@@ -261,7 +269,7 @@ public class EmployeeController {
         if(Arrays.stream(formOfPaymentOptions).noneMatch(item -> item.equals(value))) EmployeeException.invalidPaymentMethod();
     }
 
-    public static void updateEmployeeProperty(Employee employee, String property, String value, String syndicateId, String unionFee) throws ClassNotFoundException, NoSuchFieldException {
+    public void updateEmployeeProperty(Employee employee, String property, String value, String syndicateId, String unionFee, SyndicateController syndicateController) throws ClassNotFoundException, NoSuchFieldException {
         if(property.equals("nome")) {
             if(value == null || value.isEmpty()) EmployeeException.emptyEmployeeName();
             employee.setName(value);
@@ -298,12 +306,12 @@ public class EmployeeController {
 
             if(isUnionized) {
                 Employee employeeWithSyndicate = EmployeeController.getEmployeeBySyndicate(syndicateId);
-                Syndicate syndicate = SyndicateController.getSyndicateById(syndicateId);
+                Syndicate syndicate = syndicateController.getSyndicateById(syndicateId);
 
                 if(employeeWithSyndicate != null && !employeeWithSyndicate.getId().isEmpty()) SyndicateException.employeeAlreadyExists();
                 else if(syndicate == null) syndicate = new Syndicate(syndicateId);
 
-                SyndicateController.updateSyndicate(syndicate);
+                syndicateController.updateSyndicate(syndicate);
 
                 UnionizedEmployee syndicateEmployee = syndicate.getEmployeeById(employee.getId());
 
@@ -333,7 +341,7 @@ public class EmployeeController {
         }
     }
 
-    public static String getServiceFees(Employee employee, LocalDate startDate, LocalDate finishDate) throws ClassNotFoundException, NoSuchFieldException {
+    public String getServiceFees(Employee employee, LocalDate startDate, LocalDate finishDate, SyndicateController syndicateController) throws ClassNotFoundException, NoSuchFieldException {
         if(!employee.getUnionized()) EmployeeException.employeeIsNotUnionized();
         else if(startDate.isAfter(finishDate)) DateException.invalidDateOrder();
         else if(employee.getId().isEmpty()) SyndicateException.syndicateNotFound();
@@ -342,7 +350,7 @@ public class EmployeeController {
 
         if(linkedSyndicateId == null) return "0,00";
 
-        Syndicate syndicate = SyndicateController.getSyndicateById(linkedSyndicateId);
+        Syndicate syndicate = syndicateController.getSyndicateById(linkedSyndicateId);
 
         double totalValue = 0;
 
@@ -363,7 +371,7 @@ public class EmployeeController {
         return NumberFormat.doubleToCommaFormat(totalValue);
     }
 
-    public static void saveEmployeesInDatabase(XMLEmployeeManager database) throws Exception {
+    public void saveEmployeesInDatabase(XMLEmployeeManager database) throws Exception {
         try {
             database.createAndSaveEmployeeDocument(employees);
         } catch(Exception e) {

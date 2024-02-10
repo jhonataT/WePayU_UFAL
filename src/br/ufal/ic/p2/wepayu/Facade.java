@@ -18,32 +18,43 @@ public class Facade {
     private final XMLEmployeeManager xmlDatabase;
     private final XMLSyndicateManager xmlSyndicateDb;
     private Map<LocalDate, Map<Employee, PayrollEmployeeResponse>> lastLocalPayroll;
+    private final EmployeeController employeeController;
+    private final SaleController saleController;
+    private final SyndicateController syndicateController;
+    private final PayrollController payrollController;
 
     public Facade() throws Exception {
+        this.lastLocalPayroll = new HashMap<>();
+
         this.xmlDatabase = new XMLEmployeeManager("employees");
         this.xmlSyndicateDb = new XMLSyndicateManager("syndicates");
 
-        EmployeeController.initializeEmployees(this.xmlDatabase);
-        SyndicateController.initializeSyndicates(this.xmlSyndicateDb);
+        this.employeeController = EmployeeController.getInstance();
+        this.employeeController.initializeEmployees(this.xmlDatabase);
 
-        this.lastLocalPayroll = new HashMap<>();
+        this.saleController = SaleController.getInstance();
+
+        this.payrollController = PayrollController.getInstance();
+
+        this.syndicateController = SyndicateController.getInstance();
+        this.syndicateController.initializeSyndicates(this.xmlSyndicateDb, this.employeeController);
     }
 
     public void zerarSistema() throws Exception {
-        EmployeeController.resetEmployees();
-        SyndicateController.resetSyndicates();
+        this.employeeController.resetEmployees();
+        this.syndicateController.resetSyndicates();
     }
 
     public String getAtributoEmpregado(String employeeId, String property) throws Exception  {
-        return EmployeeController.getEmployeeProperty(employeeId, property);
+        return this.employeeController.getEmployeeProperty(employeeId, property, this.syndicateController);
     }
 
     public String getEmpregadoPorNome(String employeeName, int index) throws Exception {
-        return EmployeeController.getEmployeesByName(employeeName, index);
+        return this.employeeController.getEmployeesByName(employeeName, index);
     }
 
     public String criarEmpregado(String name, String address, String type, String remuneration, String commission) throws Exception {
-        return EmployeeController.createEmployee(
+        return this.employeeController.createEmployee(
             name,
             address,
             type,
@@ -67,24 +78,24 @@ public class Facade {
     }
 
     public int getHorasNormaisTrabalhadas(String employeeId, String startDate, String finishDate) throws Exception {
-        return EmployeeController.getWorkedHours(
-            EmployeeController.getEmployeeById(employeeId),
+        return this.employeeController.getWorkedHours(
+            this.employeeController.getEmployeeById(employeeId),
             this.dateVerify(startDate, "start", false),
             this.dateVerify(finishDate, "finish", true)
         );
     }
 
     public String getHorasExtrasTrabalhadas(String employeeId, String startDate, String finishDate) throws Exception {
-        return EmployeeController.getWorkedOvertime(
-            EmployeeController.getEmployeeById(employeeId),
+        return this.employeeController.getWorkedOvertime(
+            this.employeeController.getEmployeeById(employeeId),
             this.dateVerify(startDate, "start", true),
             this.dateVerify(finishDate, "finish", true)
         );
     }
 
     public void lancaCartao(String employeeId, String date, String hours) throws Exception {
-        EmployeeController.toLaunchTheCard(
-            EmployeeController.getEmployeeById(employeeId),
+        this.employeeController.toLaunchTheCard(
+            this.employeeController.getEmployeeById(employeeId),
             this.dateVerify(date, "", true),
             NumberFormat.stringToDouble(hours)
         );
@@ -97,24 +108,25 @@ public class Facade {
     }
 
     public void lancaVenda(String employeeId, String date, String value) throws Exception {
-        SaleController.saleLauncher(
-            EmployeeController.getEmployeeById(employeeId),
+        this.saleController.saleLauncher(
+            this.employeeController.getEmployeeById(employeeId),
             this.dateVerify(date, "", true),
-            NumberFormat.stringToDouble(value)
+            NumberFormat.stringToDouble(value),
+            this.employeeController
         );
     }
 
     public String getVendasRealizadas(String employeeId, String startDate, String finishDate) throws Exception {
-        return SaleController.getSalesMade(
-            EmployeeController.getEmployeeById(employeeId),
+        return this.saleController.getSalesMade(
+            this.employeeController.getEmployeeById(employeeId),
             this.dateVerify(startDate, "start", true),
             this.dateVerify(finishDate, "finish", true)
         );
     }
 
     public void alteraEmpregado(String employeeId, String property, String value, String commission) throws Exception {
-       EmployeeController.updateEmployeeByType(
-           EmployeeController.getEmployeeById(employeeId),
+        this.employeeController.updateEmployeeByType(
+           this.employeeController.getEmployeeById(employeeId),
            property,
            value,
            NumberFormat.stringToDouble(commission)
@@ -122,8 +134,8 @@ public class Facade {
     }
 
     public void alteraEmpregado(String employeeId, String property, String value, String bankName, String bankBranch, String currentAccount) throws Exception {
-       EmployeeController.updateEmployeeBankInfo(
-           EmployeeController.getEmployeeById(employeeId),
+       this.employeeController.updateEmployeeBankInfo(
+           this.employeeController.getEmployeeById(employeeId),
            property,
            value,
            bankName,
@@ -133,55 +145,68 @@ public class Facade {
     }
 
     public void alteraEmpregado(String employeeId, String property, String value, String syndicateId, String unionFee) throws Exception {
-        EmployeeController.updateEmployeeProperty(
-           EmployeeController.getEmployeeById(employeeId),
+        this.employeeController.updateEmployeeProperty(
+           this.employeeController.getEmployeeById(employeeId),
            property,
            value,
            syndicateId,
-           unionFee
+           unionFee,
+           this.syndicateController
         );
     }
 
     public void lancaTaxaServico(String syndicateId, String date, String value) throws Exception {
-        SyndicateController.launchServiceFee(
-            SyndicateController.getSyndicateById(syndicateId),
+        this.syndicateController.launchServiceFee(
+            this.syndicateController.getSyndicateById(syndicateId),
             this.dateVerify(date, "", true),
             NumberFormat.stringToDouble(value)
         );
     }
 
     public String getTaxasServico(String employeeId, String startDate, String finishDate) throws Exception {
-        return EmployeeController.getServiceFees(
-            EmployeeController.getEmployeeById(employeeId),
+        return this.employeeController.getServiceFees(
+            this.employeeController.getEmployeeById(employeeId),
             this.dateVerify(startDate, "start", true),
-            this.dateVerify(finishDate, "finish", true)
+            this.dateVerify(finishDate, "finish", true),
+            this.syndicateController
         );
     }
 
     public void alteraEmpregado(String employeeId, String property, String value) throws Exception {
         if(property.equals("sindicalizado")) {
-            Employee employee = EmployeeController.getEmployeeById(employeeId);
+            Employee employee = this.employeeController.getEmployeeById(employeeId);
 
             if(!value.equals("false") && !value.equals("true"))
                 EmployeeException.invalidBooleanFormat();
 
             employee.setUnionized(Boolean.parseBoolean(value));
-            EmployeeController.updateEmployeeList(employee);
+            this.employeeController.updateEmployeeList(employee);
         } else {
             this.alteraEmpregado(employeeId, property, value, "", "0");
         }
     }
 
     public void removerEmpregado(String employeeId) throws Exception {
-        EmployeeController.removeEmployee(EmployeeController.getEmployeeById(employeeId));
+        this.employeeController.removeEmployee(this.employeeController.getEmployeeById(employeeId));
     }
 
     public String totalFolha(String date) throws Exception {
-        return PayrollController.runPayrollAndGetTotal(this.dateVerify(date, "", true), this.lastLocalPayroll);
+        return this.payrollController.runPayrollAndGetTotal(
+            this.dateVerify(date, "", true),
+            this.lastLocalPayroll,
+            this.employeeController,
+            this.syndicateController
+        );
     }
 
     public void rodaFolha(String date, String output) throws IOException, Exception {
-        PayrollController.savePayrollFile(this.dateVerify(date, "", true), output, this.lastLocalPayroll);
+        this.payrollController.savePayrollFile(
+            this.dateVerify(date, "", true),
+            output,
+            this.lastLocalPayroll,
+            this.employeeController,
+            this.syndicateController
+        );
     }
 
     public void equalFiles(String file1, String file2) throws IOException {
@@ -189,7 +214,7 @@ public class Facade {
     }
 
     public void encerrarSistema() throws Exception {
-        SyndicateController.saveSyndicateInDatabase(this.xmlSyndicateDb);
-        EmployeeController.saveEmployeesInDatabase(this.xmlDatabase);
+        this.syndicateController.saveSyndicateInDatabase(this.xmlSyndicateDb);
+        this.employeeController.saveEmployeesInDatabase(this.xmlDatabase);
     }
 }

@@ -1,6 +1,7 @@
 package br.ufal.ic.p2.wepayu.controllers;
 
 import br.ufal.ic.p2.wepayu.exceptions.SyndicateException;
+import br.ufal.ic.p2.wepayu.models.Employee;
 import br.ufal.ic.p2.wepayu.models.Syndicate;
 import br.ufal.ic.p2.wepayu.models.UnionFee;
 import br.ufal.ic.p2.wepayu.models.UnionizedEmployee;
@@ -12,26 +13,33 @@ import java.util.Map;
 
 public class SyndicateController {
     private static Map<String, Syndicate> syndicates;
+    private static final SyndicateController instance = new SyndicateController();
 
-    public static void initializeSyndicates(XMLSyndicateManager database) {
-        syndicates = database.readAndGetSyndicateFile(EmployeeController.getEmployees());
+    private SyndicateController() {}
+
+    public static SyndicateController getInstance() {
+        return instance;
     }
 
-    public static void resetSyndicates() { syndicates = new HashMap<>(); }
+    public void initializeSyndicates(XMLSyndicateManager database, EmployeeController employeeController) {
+        syndicates = database.readAndGetSyndicateFile(employeeController.getEmployees());
+    }
 
-    public static Map<String, Syndicate> getSyndicates() { return syndicates; }
+    public void resetSyndicates() { syndicates = new HashMap<>(); }
 
-    public static Syndicate getSyndicateById(String syndicateId) throws NoSuchFieldException, ClassNotFoundException {
+    public Map<String, Syndicate> getSyndicates() { return syndicates; }
+
+    public Syndicate getSyndicateById(String syndicateId) throws NoSuchFieldException, ClassNotFoundException {
         if(syndicateId.isEmpty()) SyndicateException.emptySyndicateId();
 
         return syndicates.get(syndicateId);
     }
 
-    public static void updateSyndicate(Syndicate syndicate) {
+    public void updateSyndicate(Syndicate syndicate) {
         syndicates.put(syndicate.getId(), syndicate);
     }
 
-    public static void launchServiceFee(Syndicate syndicate, LocalDate date, double value) throws ClassNotFoundException {
+    public void launchServiceFee(Syndicate syndicate, LocalDate date, double value) throws ClassNotFoundException {
         if(syndicate == null) SyndicateException.syndicateNotFound();
         if(value <= 0) SyndicateException.negativeValue();
 
@@ -41,7 +49,7 @@ public class SyndicateController {
         syndicate.addNewUnionFee(newUnionFee);
     }
 
-    public static void saveSyndicateInDatabase(XMLSyndicateManager database) throws Exception {
+    public void saveSyndicateInDatabase(XMLSyndicateManager database) throws Exception {
         try {
             database.createAndSaveSyndicateDocument(syndicates);
         } catch(Exception e) {
