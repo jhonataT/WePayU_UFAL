@@ -10,14 +10,19 @@ import br.ufal.ic.p2.wepayu.utils.XMLEmployeeManager;
 import java.time.LocalDate;
 import java.util.*;
 
-public class EmployeeController {
+public abstract class EmployeeController {
     private static final String[] typeOptions = { "horista", "assalariado", "comissionado" };
     private static final String[] formOfPaymentOptions = { "banco", "correios", "emMaos" };
     private static final String[] employeeProperties = { "id", "nome", "endereco", "tipo", "salario", "sindicalizado", "comissao", "hours", "sales", "banco" };
     private static Map<String, Employee> employees;
-    private static final EmployeeController instance = new EmployeeController();
+    private static final EmployeeController instance = new EmployeeController() {
+        @Override
+        public String getEmployeeProperty(String employeeId, String property) throws Exception {
+            return null;
+        }
+    };
 
-    private EmployeeController() {}
+    protected EmployeeController() {}
 
     public static EmployeeController getInstance() {
         return instance;
@@ -378,4 +383,6 @@ public class EmployeeController {
             throw new Exception("Erro ao salvar EMPLOYEES_XML");
         }
     }
+
+    public abstract String getEmployeeProperty(String employeeId, String property) throws Exception;
 }

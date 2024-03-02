@@ -1,5 +1,7 @@
 package br.ufal.ic.p2.wepayu.utils;
 
+import br.ufal.ic.p2.wepayu.exceptions.DateException;
+
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -49,5 +51,17 @@ public class DateFormat {
         return ChronoUnit.DAYS.between(date, dateToCompare);
     }
 
+    public static LocalDate dateVerify(String newDate, String type, boolean isStrict) throws ClassCastException {
+        LocalDate date = null;
 
+        try {
+            date = DateFormat.stringToDate(newDate, isStrict);
+        } catch(Exception e) {
+            if(type.equals("start")) DateException.invalidStartDate();
+            else if(type.equals("finish")) DateException.invalidFinalDate();
+            else DateException.invalidDate();
+        }
+
+        return date;
+    }
 }
