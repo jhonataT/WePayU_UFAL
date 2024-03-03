@@ -154,7 +154,7 @@ public class PayrollController {
             totalHours,
             totalOvertime,
             totalPayment,
-            discounts,
+            totalPayment > 0 ? discounts : 0,
             paymentMethod,
             0,
             employee.getRemuneration(),
@@ -170,17 +170,24 @@ public class PayrollController {
             double discount = 0d;
 
             if(isUnionized) {
-//                discount += (employee.getUnionFee()) * (employee.getType().equals("horista") ? 7 : employee.getType().equals("comissionado") ? 14 : 30);
-                discount += employee.getUnionFee();
+                discount += (employee.getUnionFee()) * (employee.getType().equals("horista") ? 7 : employee.getType().equals("comissionado") ? 14 : 30);
 
                 String syndicateId = employee.getLinkedSyndicateId();
 
                 Syndicate syndicate = syndicateController.getSyndicateById(syndicateId);
 
-                List<UnionizedEmployee> unionizedEmployees = syndicate.getEmployeesById(employee.getId());
+                List<UnionFee> unionFeeList = syndicate.getUnionFeeList();
 
-                for(UnionizedEmployee unionizedEmployee : unionizedEmployees) {
-//                    discount += (unionizedEmployee.getValue() * (employee.getType().equals("horista") ? 7 : employee.getType().equals("comissionado") ? 14 : 30));
+                for(UnionFee unionFee : unionFeeList) {
+                    if(unionFee.getDate().isBefore(date) || unionFee.getDate().isEqual(date)) {
+                        if(employee.getType().equals("horista") && DateFormat.getDifferenceInDays(date, unionFee.getDate()) < 7) {
+                            discount += unionFee.getValue();
+                        } else if(employee.getType().equals("comissionado") && DateFormat.getDifferenceInDays(date, unionFee.getDate()) < 14) {
+                            discount += unionFee.getValue();
+                        } else if(employee.getType().equals("assalariado") && DateFormat.getDifferenceInDays(date, unionFee.getDate()) < 30) {
+                            discount += unionFee.getValue();
+                        }
+                    }
                 }
             }
 
