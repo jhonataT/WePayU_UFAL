@@ -331,7 +331,8 @@ public abstract class EmployeeController {
                         employee.getSales(),
                         "unionizedId_"+newId,
                         NumberFormat.stringToDouble(unionFee),
-                        true
+                        true,
+                        null
                     ));
                 } else {
                     syndicateEmployee.setUnionFee(NumberFormat.stringToDouble(unionFee));
@@ -340,6 +341,11 @@ public abstract class EmployeeController {
                 employee.setLinkedSyndicate(syndicate.getId());
                 employee.setUnionFee(NumberFormat.stringToDouble(unionFee));
                 updateEmployeeList(employee);
+
+                if(employee.getName().equals("Claudia Abreu")) {
+                    System.out.println("\n\nunionFee -> " + employee.getUnionFee());
+                    System.out.println("Name -> " + employee.getName());
+                }
             }
         } else {
             EmployeeException.propertyNotExists();

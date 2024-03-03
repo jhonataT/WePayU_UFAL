@@ -100,11 +100,6 @@ public class PayrollController {
 
 
     public static PayrollEmployeeResponse getHourlyPayrollDetails(Employee employee, LocalDate date, double discounts, EmployeeController employeeController) {
-        System.out.println("\n\nEMPLOYEE NAME -> " + employee.getName());
-        System.out.println("CURRENT DATE -> " + date);
-        System.out.println("LAST PAYMENT DATE -> " + employee.getLastPayment());
-        System.out.println("DATE DIFFERENCE -> " + DateFormat.getDifferenceInDays(employee.getLastPayment(), date) + "\n\n");
-
         LocalDate lastPaymentDate = employee.getLastPayment();
 
         int totalHours = 0;
@@ -143,6 +138,15 @@ public class PayrollController {
             employeeController.updateEmployeeList(employee);
         }
 
+        if(employee.getName().equals("Claudia Abreu")) {
+            System.out.println("\n\nEMPLOYEE NAME -> " + employee.getName());
+            System.out.println("CURRENT DATE -> " + date);
+            System.out.println("CURRENT totalPayment -> " + totalPayment);
+            System.out.println("CURRENT discounts -> " + discounts);
+            System.out.println("LAST PAYMENT DATE -> " + employee.getLastPayment());
+            System.out.println("DATE DIFFERENCE -> " + DateFormat.getDifferenceInDays(employee.getLastPayment(), date) + "\n\n");
+        }
+
         String paymentMethod = employeeController.formatPaymentMethod(employee);
 
         return new PayrollEmployeeResponse(
@@ -159,14 +163,15 @@ public class PayrollController {
     }
 
     public String runPayrollAndGetTotal(LocalDate date, Map<LocalDate, Map<Employee, PayrollEmployeeResponse>> lastLocalPayroll, EmployeeController employeeController, SyndicateController syndicateController) throws NoSuchFieldException, ClassNotFoundException {
-        double totalPayment = 0;
+        double totalPayment = 0d;
 
         for(Employee employee : employeeController.getEmployees().values()) {
             boolean isUnionized = employee.getUnionized();
-            double discount = 0;
+            double discount = 0d;
 
             if(isUnionized) {
-                discount += (employee.getUnionFee()) * (employee.getType().equals("horista") ? 7 : employee.getType().equals("comissionado") ? 14 : 30);
+//                discount += (employee.getUnionFee()) * (employee.getType().equals("horista") ? 7 : employee.getType().equals("comissionado") ? 14 : 30);
+                discount += employee.getUnionFee();
 
                 String syndicateId = employee.getLinkedSyndicateId();
 
@@ -175,7 +180,7 @@ public class PayrollController {
                 List<UnionizedEmployee> unionizedEmployees = syndicate.getEmployeesById(employee.getId());
 
                 for(UnionizedEmployee unionizedEmployee : unionizedEmployees) {
-                    discount += (unionizedEmployee.getValue() * (employee.getType().equals("horista") ? 7 : employee.getType().equals("comissionado") ? 14 : 30));
+//                    discount += (unionizedEmployee.getValue() * (employee.getType().equals("horista") ? 7 : employee.getType().equals("comissionado") ? 14 : 30));
                 }
             }
 

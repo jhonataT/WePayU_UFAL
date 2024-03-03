@@ -1,10 +1,8 @@
 package br.ufal.ic.p2.wepayu.controllers;
 
 import br.ufal.ic.p2.wepayu.exceptions.SyndicateException;
-import br.ufal.ic.p2.wepayu.models.Employee;
 import br.ufal.ic.p2.wepayu.models.Syndicate;
 import br.ufal.ic.p2.wepayu.models.UnionFee;
-import br.ufal.ic.p2.wepayu.models.UnionizedEmployee;
 import br.ufal.ic.p2.wepayu.utils.XMLSyndicateManager;
 
 import java.time.LocalDate;

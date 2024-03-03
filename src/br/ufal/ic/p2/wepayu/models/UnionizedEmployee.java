@@ -1,10 +1,12 @@
 package br.ufal.ic.p2.wepayu.models;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public class UnionizedEmployee extends Employee {
     private String unionizedId;
     private double unionFee;
+    private LocalDate date;
     public UnionizedEmployee(
         String employeeId,
         String name,
@@ -13,12 +15,14 @@ public class UnionizedEmployee extends Employee {
         List<Sale> sales,
         String unionizedId,
         double unionFee,
-        boolean unionized
+        boolean unionized,
+        LocalDate date
     ) {
         super(employeeId, name, type, remuneration, sales, unionized);
 
         this.unionizedId = unionizedId;
         this.unionFee = unionFee;
+        this.date = date;
     }
 
     public String getUnionizedId() {
@@ -27,5 +31,9 @@ public class UnionizedEmployee extends Employee {
 
     public double getValue() {
         return this.unionFee;
+    }
+
+    public LocalDate getDate() {
+        return this.date;
     }
 }

@@ -11,6 +11,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -65,6 +66,7 @@ public class XMLSyndicateManager extends XMLEmployeeManager implements Interface
                         if(unionizedEmployeeElement.getNodeType() == Node.ELEMENT_NODE) {
                             String unionizedId = unionizedEmployeeElement.getElementsByTagName("unionizedId").item(0).getTextContent();
                             String unionFeeValue = unionizedEmployeeElement.getElementsByTagName("unionFeeValue").item(0).getTextContent();
+                            String unionFeeDate = unionizedEmployeeElement.getElementsByTagName("unionFeeDate").item(0).getTextContent();
                             String employeeId = unionizedEmployeeElement.getElementsByTagName("employeeId").item(0).getTextContent();
 
                             Employee employee = employees.get(employeeId);
@@ -78,7 +80,8 @@ public class XMLSyndicateManager extends XMLEmployeeManager implements Interface
                                     employee.getSales(),
                                     unionizedId,
                                     Double.parseDouble(unionFeeValue),
-                                    employee.getUnionized()
+                                    employee.getUnionized(),
+                                    DateFormat.stringToDate(unionFeeDate, true)
                                 );
 
                                 newSyndicate.addNewEmployee(newUnionizedEmployee);
@@ -145,9 +148,11 @@ public class XMLSyndicateManager extends XMLEmployeeManager implements Interface
                 Element childUnValueElement = document.createElement("unionFeeValue");
                 childUnValueElement.appendChild(document.createTextNode(Double.toString(unionizedEmployee.getValue())));
 
+                Element childUnDateElement = document.createElement("unionFeeDate");
+                childUnDateElement.appendChild(document.createTextNode(unionizedEmployee.getDate().toString()));
+
                 Element childEmployeeIdElement = document.createElement("employeeId");
                 childEmployeeIdElement.appendChild(document.createTextNode(unionizedEmployee.getId()));
-
 
                 childUnEmployeesElement.appendChild(childUnEmployeeElement);
                 childUnEmployeeElement.appendChild(childUnIdElement);
