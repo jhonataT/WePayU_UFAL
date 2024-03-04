@@ -27,12 +27,12 @@ public class PayrollController {
         double currentValue = 0;
         double currentValueFromSales = 0;
 
-        long dayToDecrease = lastPaymentDate == null ? 15 : DateFormat.getDifferenceInDays(date, lastPaymentDate);
+        long dayToDecrease = lastPaymentDate == null ? 14 : DateFormat.getDifferenceInDays(date, lastPaymentDate);
 
         List<Sale> saleList = employee.getSales();
         LocalDate formattedStartDate = date.minusDays(dayToDecrease);
 
-        currentValue += (employee.getRemuneration() * 12 / 52);
+        currentValue += (employee.getRemuneration() * ((double) 12 / 52));
 
         double commission = employee.getCommission();
 
@@ -65,7 +65,7 @@ public class PayrollController {
             discounts,
             paymentMethod,
             currentValueFromSales,
-            (employee.getRemuneration() * 12 / 52),
+            (employee.getRemuneration() * ((double) 12 / 52)),
             employee.getCommission()
         );
     }
@@ -180,11 +180,11 @@ public class PayrollController {
 
                 for(UnionFee unionFee : unionFeeList) {
                     if(unionFee.getDate().isBefore(date) || unionFee.getDate().isEqual(date)) {
-                        if(employee.getType().equals("horista") && DateFormat.getDifferenceInDays(date, unionFee.getDate()) < 7) {
+                        if(employee.getType().equals("horista") && DateFormat.getDifferenceInDays(unionFee.getDate(), date) < 7) {
                             discount += unionFee.getValue();
-                        } else if(employee.getType().equals("comissionado") && DateFormat.getDifferenceInDays(date, unionFee.getDate()) < 14) {
+                        } else if(employee.getType().equals("comissionado") && DateFormat.getDifferenceInDays(unionFee.getDate(), date) < 14) {
                             discount += unionFee.getValue();
-                        } else if(employee.getType().equals("assalariado") && DateFormat.getDifferenceInDays(date, unionFee.getDate()) < 30) {
+                        } else if(employee.getType().equals("assalariado") && DateFormat.getDifferenceInDays(unionFee.getDate(), date) < 30) {
                             discount += unionFee.getValue();
                         }
                     }
@@ -194,9 +194,13 @@ public class PayrollController {
             PayrollEmployeeResponse payrollEmployeeResponse = null;
             LocalDate lastPaymentDate = employee.getLastPayment();
 
+            if(employee.getType().equals("comissionado")) {
+                System.out.println("\n\n Confirm commissionado -> IsFriday: " + DateFormat.isFriday(date) + " Days difference: " + DateFormat.getDifferenceInDays(lastPaymentDate, date) + " Date: " + date);
+            }
+
             if(employee.getType().equals("horista") && DateFormat.isFriday(date)) {
                 payrollEmployeeResponse = PayrollController.getHourlyPayrollDetails(employee, date, discount, employeeController);
-            } else if(employee.getType().equals("comissionado") && DateFormat.isFriday(date) && DateFormat.getDifferenceInDays(date, lastPaymentDate) >= 15) {
+            } else if(employee.getType().equals("comissionado") && DateFormat.isFriday(date) && DateFormat.getDifferenceInDays(lastPaymentDate, date) >= 13) {
                 payrollEmployeeResponse = PayrollController.getCommissionedPayrollDetails(employee, date, discount, employeeController);
             } else if(employee.getType().equals("assalariado") && DateFormat.isLastWorkingDayOfMonth(date)) {
                 payrollEmployeeResponse = PayrollController.getSalariedPayrollDetails(employee, date, discount, employeeController);

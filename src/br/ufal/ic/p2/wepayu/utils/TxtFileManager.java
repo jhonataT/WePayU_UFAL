@@ -28,14 +28,15 @@ public class TxtFileManager {
             bufferedWriter.newLine();
             bufferedWriter.newLine();
 
-            writeFormattedContent(bufferedWriter, payrollList);
+            writeFormattedContent(bufferedWriter, payrollList, payrollDate);
 
         } catch (IOException e) {
             throw new IOException("Erro ao escrever no arquivo: " + e.getMessage());
         }
     }
 
-    private static void addingHourlyPayrollEmployees(BufferedWriter writer, List<PayrollEmployeeResponse> payrollList) throws IOException {
+    private static double
+    addingHourlyPayrollEmployees(BufferedWriter writer, List<PayrollEmployeeResponse> payrollList) throws IOException {
         writer.write("===============================================================================================================================");
         writer.newLine();
         writer.write("===================== HORISTAS ================================================================================================");
@@ -51,6 +52,8 @@ public class TxtFileManager {
         int totalExtraHours = 0;
         double totalRemuneration = 0;
         double totalDiscounts = 0;
+
+        double totalToReturn = 0;
 
         for (PayrollEmployeeResponse currentPayroll : payrollList) {
             totalHours += currentPayroll.getHours();
@@ -72,18 +75,25 @@ public class TxtFileManager {
         }
 
         String finalLine = String.format("TOTAL HORISTAS                        %5d %5d %13s %9s %15s",
-                totalHours,
-                totalExtraHours,
-                NumberFormat.doubleToCommaFormat(totalRemuneration),
-                NumberFormat.doubleToCommaFormat(totalDiscounts),
-                NumberFormat.doubleToCommaFormat(totalRemuneration - totalDiscounts));
+            totalHours,
+            totalExtraHours,
+            NumberFormat.doubleToCommaFormat(totalRemuneration),
+            NumberFormat.doubleToCommaFormat(totalDiscounts),
+            NumberFormat.doubleToCommaFormat(totalRemuneration - totalDiscounts)
+        );
+
+        System.out.println("\n\n RESULT -> " + NumberFormat.doubleToCommaFormat(totalRemuneration - totalDiscounts));
+
+        totalToReturn += totalRemuneration;
 
         writer.newLine();
         writer.write(finalLine);
         writer.newLine();
+
+        return totalToReturn;
     }
 
-    private static void addingWageEarnersPayrollEmployees(BufferedWriter writer, List<PayrollEmployeeResponse> payrollList) throws IOException {
+    private static double addingWageEarnersPayrollEmployees(BufferedWriter writer, List<PayrollEmployeeResponse> payrollList) throws IOException {
         writer.newLine();
         writer.write("===============================================================================================================================");
         writer.newLine();
@@ -97,6 +107,7 @@ public class TxtFileManager {
 
         double totalRemuneration = 0;
         double totalDiscounts = 0;
+        double totalToReturn = 0;
 
         for (PayrollEmployeeResponse currentPayroll : payrollList) {
             totalRemuneration += currentPayroll.getRemuneration();
@@ -107,7 +118,8 @@ public class TxtFileManager {
                 NumberFormat.doubleToCommaFormat(currentPayroll.getRemuneration()),
                 NumberFormat.doubleToCommaFormat(currentPayroll.getDiscounts()),
                 NumberFormat.doubleToCommaFormat(currentPayroll.getRemuneration() - currentPayroll.getDiscounts()),
-                currentPayroll.getPaymentMethod());
+                currentPayroll.getPaymentMethod()
+            );
 
             writer.newLine();
             writer.write(currentRow);
@@ -116,15 +128,20 @@ public class TxtFileManager {
         String finalLine = String.format("TOTAL ASSALARIADOS                                       %13s %9s %15s",
             NumberFormat.doubleToCommaFormat(totalRemuneration),
             NumberFormat.doubleToCommaFormat(totalDiscounts),
-            NumberFormat.doubleToCommaFormat(totalRemuneration - totalDiscounts));
+            NumberFormat.doubleToCommaFormat(totalRemuneration - totalDiscounts)
+        );
 
-        writer.newLine();
+        totalToReturn += (totalRemuneration - totalDiscounts) < 0 ? 0 : (totalRemuneration - totalDiscounts);
+
+                writer.newLine();
         writer.newLine();
         writer.write(finalLine);
         writer.newLine();
+
+        return totalToReturn;
     }
 
-    private static void addingCommissionedPayrollEmployees(BufferedWriter writer, List<PayrollEmployeeResponse> payrollList) throws IOException {
+    private static double addingCommissionedPayrollEmployees(BufferedWriter writer, List<PayrollEmployeeResponse> payrollList) throws IOException {
         writer.newLine();
         writer.write("===============================================================================================================================");
         writer.newLine();
@@ -138,12 +155,13 @@ public class TxtFileManager {
 
         double totalRemuneration = 0;
         double totalDiscounts = 0;
+        double totalToReturn = 0;
 
         for (PayrollEmployeeResponse currentPayroll : payrollList) {
             totalRemuneration += currentPayroll.getRemuneration();
             totalDiscounts += currentPayroll.getDiscounts();
 
-            String currentRow = String.format("%-25s %10s %10s %10s %13s %9s %15s %-40s",
+            String currentRow = String.format("%10s %10s %10s %10s %13s %9s %15s %-40s",
                 currentPayroll.getEmployee().getName(),
                 NumberFormat.doubleToCommaFormat(currentPayroll.getFixedRemuneration()),
                 NumberFormat.doubleToCommaFormat(currentPayroll.getTotalSales()),
@@ -151,7 +169,8 @@ public class TxtFileManager {
                 NumberFormat.doubleToCommaFormat(currentPayroll.getRemuneration()),
                 NumberFormat.doubleToCommaFormat(currentPayroll.getDiscounts()),
                 NumberFormat.doubleToCommaFormat(currentPayroll.getRemuneration() - currentPayroll.getDiscounts()),
-                currentPayroll.getPaymentMethod());
+                currentPayroll.getPaymentMethod()
+            );
 
             writer.newLine();
             writer.write(currentRow);
@@ -163,12 +182,17 @@ public class TxtFileManager {
             "0,00", // Considerando que não há descontos específicos para comissionados no modelo
             NumberFormat.doubleToCommaFormat(totalRemuneration),
             NumberFormat.doubleToCommaFormat(totalDiscounts),
-            NumberFormat.doubleToCommaFormat(totalRemuneration - totalDiscounts));
+            NumberFormat.doubleToCommaFormat(totalRemuneration - totalDiscounts)
+        );
+
+        totalToReturn += (totalRemuneration - totalDiscounts) < 0 ? 0 : (totalRemuneration - totalDiscounts);
 
         writer.newLine();
         writer.newLine();
         writer.write(finalLine);
         writer.newLine();
+
+        return totalToReturn;
     }
 
 
@@ -176,7 +200,9 @@ public class TxtFileManager {
         currentList.sort(Comparator.comparing(employeeResponse -> employeeResponse.getEmployee().getName()));
     }
 
-    private static void writeFormattedContent(BufferedWriter writer, Map<Employee, PayrollEmployeeResponse> payrollList) throws IOException {
+    private static void writeFormattedContent(BufferedWriter writer, Map<Employee, PayrollEmployeeResponse> payrollList, LocalDate payrollDate) throws IOException {
+        double total = 0;
+
         List<PayrollEmployeeResponse> filteredHourlyList = new ArrayList<>();
         List<PayrollEmployeeResponse> filteredWageEarnersList = new ArrayList<>();
         List<PayrollEmployeeResponse> filteredCommissionedList = new ArrayList<>();
@@ -194,9 +220,19 @@ public class TxtFileManager {
         if(!filteredWageEarnersList.isEmpty()) sortByEmployeeName(filteredWageEarnersList);
         if(!filteredCommissionedList.isEmpty()) sortByEmployeeName(filteredCommissionedList);
 
-        addingHourlyPayrollEmployees(writer, filteredHourlyList);
-        addingWageEarnersPayrollEmployees(writer, filteredWageEarnersList);
-        addingCommissionedPayrollEmployees(writer, filteredCommissionedList);
+        System.out.println("\n\nCOMISSIONARIO SIZE -> " + filteredCommissionedList.size() + "  data -> " + payrollDate);
+
+        total += addingHourlyPayrollEmployees(writer, filteredHourlyList);
+        total += addingWageEarnersPayrollEmployees(writer, filteredWageEarnersList);
+        total += addingCommissionedPayrollEmployees(writer, filteredCommissionedList);
+
+        String finalLine = String.format("TOTAL FOLHA: %.6s",
+            NumberFormat.doubleToCommaFormat(total)
+        );
+
+        writer.newLine();
+        writer.write(finalLine);
+        writer.newLine();
     }
 
     public String getContent() throws FileNotFoundException {
